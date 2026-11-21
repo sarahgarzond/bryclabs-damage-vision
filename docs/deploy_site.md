@@ -62,3 +62,19 @@ DV_BACKEND=mock DV_VERIFY=0 uvicorn app.api:app --port 8080          # fake mode
 ```
 
 Then connect the site to `http://localhost:8080`. A plain http address works when the site itself is local.
+
+### Hosted OpenAI vision model
+
+On the machine hosting the API, inject `DV_API_KEY` from its secret store and run:
+
+```sh
+DV_BACKEND=openai DV_BASE_URL=https://api.openai.com/v1 DV_MODEL=gpt-4.1 \
+  DV_RUNS=1 DV_VERIFY=0 DV_CORS_ORIGINS=https://sarahgarzond.github.io \
+  uvicorn app.api:app --host 0.0.0.0 --port 8080
+```
+
+Expose the service over HTTPS. Set the GitHub Actions repository variable
+`DAMAGE_API_URL` to the HTTPS service URL and rerun the Pages workflow. The site
+will call `/health` and send user-selected photos to `/analyze`. The model key
+belongs only in the backend environment. Apply authentication or rate limits
+at the hosting layer before exposing a paid model to public traffic.

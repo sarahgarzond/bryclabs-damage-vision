@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=8">
+  <link rel="stylesheet" href="assets/style.css?v=9">
 </head>
 <body>
   <header class="top">
@@ -28,11 +28,6 @@
 
   <main class="page">
 
-    <div class="photo-controls">
-      <label class="btn" for="fileInput">Choose photo</label>
-      <p class="examples" id="examples"></p>
-    </div>
-
     <label class="drop" id="drop" for="fileInput" tabindex="0">
       <input type="file" id="fileInput" accept="image/*" hidden>
       <div class="drop-empty" id="dropEmpty">
@@ -48,6 +43,7 @@
       </div>
     </label>
 
+    <p class="upload-status" id="uploadStatus" role="status" hidden></p>
     <section class="out" id="out" hidden>
       <div class="notice" id="notice" hidden></div>
       <div class="actions">
@@ -74,11 +70,11 @@
   <dialog id="connectDialog" class="dialog">
     <form method="dialog" class="dialog-body">
       <h3>Connect the model</h3>
-      <p>Paste the https address of the running API. Without it, only the examples work.</p>
+      <p>Enter the HTTPS address of the damage analysis API.</p>
       <input type="url" id="apiInput" placeholder="https://your-tunnel.trycloudflare.com" autocomplete="off">
       <p class="test" id="testResult"></p>
       <div class="dialog-actions">
-        <button class="btn" type="button" id="disconnectBtn">Demo mode</button>
+        <button class="btn" type="button" id="disconnectBtn">Reset connection</button>
         <span class="spacer"></span>
         <button class="btn" type="button" id="testBtn">Test</button>
         <button class="btn primary" type="button" id="saveBtn">Save</button>
@@ -108,6 +104,6 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="assets/app.js?v=8"></script>
+  <script src="assets/app.js?v=9"></script>
 </body>
 </html>

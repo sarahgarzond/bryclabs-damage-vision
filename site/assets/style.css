@@ -178,10 +178,10 @@ img { display: block; max-width: 100%; }
 @media (max-width: 640px) { .caveat-pop { left: auto; right: -40px; } }
 
 /* Keep the example image and its downloadable JSON in the same view. */
-.photo-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 12px; }
-.photo-controls .examples { margin: 0; text-align: left; }
 .drop.has-photo { min-height: 0; }
 .stage img { display: block; max-height: min(48vh, 440px); }
 .result-title { margin: 0 auto 0 0; font-size: 1.25rem; }
 .extra-exports { margin-top: 12px; }
 .extra-exports summary { cursor: pointer; color: var(--muted); margin-bottom: 8px; }
+
+.upload-status { color: var(--muted); margin: 14px 0; }

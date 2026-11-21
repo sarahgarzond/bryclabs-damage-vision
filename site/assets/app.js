@@ -9,7 +9,7 @@
     get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
     set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch { /* private mode */ } },
   };
-  const state = { api: null, health: null, result: null, examples: [] };
+  const state = { api: null, health: null, result: null };
 
   /* ---------- connection ---------- */
   const normalise = (u) => { u = (u || "").trim().replace(/\/+$/, ""); if (u && !/^https?:\/\//i.test(u)) u = "https://" + u; return u || null; };
@@ -23,7 +23,7 @@
   }
   async function connect(url, quiet) {
     state.api = normalise(url); state.health = null;
-    if (!state.api) return setStatus(null, "Demo mode");
+    if (!state.api) return setStatus(null, "Model disconnected");
     setStatus(null, "Connecting…");
     try {
       const h = await health(state.api); state.health = h;
@@ -79,8 +79,13 @@
     showPhoto(URL.createObjectURL(upload), "Uploaded damage photo");
     $("#busy").hidden = true;
     $("#out").hidden = true;
-    if (!state.health) {
-      toast("Connect the model first, or try an example");
+    $("#uploadStatus").hidden = true;
+    await connectionReady;
+    if (current !== selection) return;
+    if (!state.health || state.health.mock) {
+      const status = $("#uploadStatus");
+      status.textContent = "Connect a live vision model to analyse this photo.";
+      status.hidden = false;
       $("#statusPill").click();
       return;
     }
@@ -96,29 +101,6 @@
       if (current === selection) render(result, "live");
     } catch (e) { if (current === selection) toast("Analysis failed: " + e.message); }
     finally { clearInterval(timer); if (current === selection) busy.hidden = true; }
-  }
-
-  /* ---------- examples ---------- */
-  async function loadExamples() {
-    try { const r = await fetch("examples/index.json", { cache: "no-cache" }); state.examples = r.ok ? await r.json() : []; } catch { state.examples = []; }
-    const el = $("#examples");
-    if (!state.examples.length) return;
-    el.innerHTML = "Try an example: " + state.examples.map((ex, i) => `<button type="button" data-i="${i}">${esc(ex.title)}</button>`).join(" · ");
-    el.querySelectorAll("button").forEach((b) => (b.onclick = () => openExample(+b.dataset.i)));
-    if (selection === 0) await openExample(0);
-  }
-  async function openExample(i) {
-    const ex = state.examples[i];
-    const current = ++selection;
-    $("#busy").hidden = true;
-    try {
-      const response = await fetch(ex.result);
-      if (!response.ok) throw new Error("Example unavailable");
-      const result = await response.json();
-      if (current !== selection) return;
-      showPhoto(ex.image, ex.title);
-      render(result, ex.illustrative ? "illustrative" : "example");
-    } catch { if (current === selection) toast("Could not load the example"); }
   }
 
   /* ---------- render ---------- */
@@ -275,6 +257,17 @@
   const qs = new URLSearchParams(location.search).get("api");
   if (qs) store.set("dv_api", normalise(qs));
   loadReliability().then(() => { if (state.result) renderCaveats(state.result, state.source); });
-  loadExamples();
-  connect(store.get("dv_api"), true);
+  async function connectDefault() {
+    const saved = store.get("dv_api");
+    if (saved) return connect(saved, true);
+    try {
+      const response = await fetch("data/api-config.json");
+      if (response.ok) {
+        const config = await response.json();
+        return connect(config.api_url, true);
+      }
+    } catch { /* Model settings accept a manual HTTPS address. */ }
+    return connect(null, true);
+  }
+  const connectionReady = connectDefault();
 })();

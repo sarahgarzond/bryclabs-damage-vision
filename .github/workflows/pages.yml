@@ -24,6 +24,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Configure the vision backend URL
+        env:
+          DAMAGE_API_URL: ${{ vars.DAMAGE_API_URL }}
+        run: |
+          mkdir -p site/data
+          python -c 'import json, os; print(json.dumps({"api_url": os.environ["DAMAGE_API_URL"]}))' > site/data/api-config.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
