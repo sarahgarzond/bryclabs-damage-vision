@@ -1,0 +1,22 @@
+[
+  {
+    "title": "Ceiling stain + wall crack",
+    "image": "examples/ceiling_stain.svg",
+    "result": "examples/ceiling_stain.json",
+    "illustrative": true,
+    "claimant_text": "Water came through the ceiling after a pipe burst in the flat above."
+  },
+  {
+    "title": "No damage (negative)",
+    "image": "examples/clean_wall.svg",
+    "result": "examples/clean_wall.json",
+    "illustrative": true
+  },
+  {
+    "title": "Dark, blurry photo",
+    "image": "examples/dark_corner.svg",
+    "result": "examples/dark_corner.json",
+    "illustrative": true,
+    "claimant_text": "There is a crack and mould in the corner."
+  }
+]

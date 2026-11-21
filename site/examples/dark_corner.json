@@ -1,0 +1,82 @@
+{
+  "image_id": "dark_corner",
+  "width": 800,
+  "height": 600,
+  "damage_present": "unclear",
+  "image_quality": "poor",
+  "quality_issues": [
+    "dark",
+    "blur"
+  ],
+  "scene": "interior",
+  "findings": [
+    {
+      "damage_type": "crack",
+      "component": "wall",
+      "material": "unknown",
+      "location": "upper left wall",
+      "visible_traits": [
+        "faint dark line"
+      ],
+      "extent": "unknown",
+      "age_indicators": [
+        "none_visible"
+      ],
+      "status": "inferred",
+      "uncertain": true,
+      "bbox": [
+        160.0,
+        50.0,
+        80.0,
+        290.0
+      ],
+      "notes": null,
+      "confidence": 0.31,
+      "agreement": 0.67,
+      "verified": false,
+      "verifier_score": 0.05
+    }
+  ],
+  "limitations": [
+    "Photo too dark and blurry to confirm damage",
+    "Material not identifiable"
+  ],
+  "dropped_findings": [],
+  "meta": {
+    "model": "illustrative",
+    "backend": "illustrative",
+    "runs": 3,
+    "runtime_s": 0.0,
+    "seconds_per_run": [],
+    "verifier": null,
+    "verifier_s": null,
+    "device": null,
+    "tokens": null,
+    "est_cost_usd": null,
+    "errors": []
+  },
+  "status": "ok",
+  "readiness": {
+    "established": [],
+    "indicated": [
+      "crack on wall (inferred, confidence 0.31)"
+    ],
+    "missing": [
+      "Photo quality limits the assessment (dark, blur)",
+      "Damage could not be confirmed from this photo",
+      "Photo too dark and blurry to confirm damage",
+      "Material not identifiable"
+    ],
+    "follow_up_requests": [
+      "Close-up of the crack on wall so the material can be identified",
+      "Wider shot showing the full extent of the crack on wall",
+      "Sharp, well lit close-up of the crack on wall to confirm it",
+      "Retake the photo in daylight, closer, without blur"
+    ],
+    "claim_text_consistency": [
+      "Reported mould: no supporting visual indicator in this photo",
+      "Reported crack: visual indicators present (crack)"
+    ],
+    "note": "Evidence summary only. Coverage is decided by the policy check and human review."
+  }
+}

@@ -37,7 +37,7 @@ def assess(result: ImageResult, claimant_text: Optional[str] = None) -> dict:
             requests.append(f"Wider shot showing the full extent of the {label}")
         if f.uncertain:
             requests.append(f"Sharp, well lit close-up of the {label} to confirm it")
-        long_term = [a.value for a in f.age_indicators if a.value != "none_visible"]
+        long_term = [a.value.replace("_", " ") for a in f.age_indicators if a.value != "none_visible"]
         if long_term:
             indicated.append(f"Possible long-term damage indicators at {label}: {', '.join(long_term)}")
 

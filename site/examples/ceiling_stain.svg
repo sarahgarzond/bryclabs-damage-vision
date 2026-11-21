@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <linearGradient id="ceil" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eeece6"/><stop offset="1" stop-color="#dcd9d1"/></linearGradient>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e7e2d8"/><stop offset="1" stop-color="#d3cdc0"/></linearGradient>
+    <radialGradient id="stain" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#b08a55" stop-opacity=".75"/><stop offset=".55" stop-color="#a27a45" stop-opacity=".55"/><stop offset=".8" stop-color="#8a6534" stop-opacity=".7"/><stop offset="1" stop-color="#8a6534" stop-opacity="0"/></radialGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="2.5"/></filter>
+  </defs>
+  <polygon points="0,0 800,0 800,300 560,330 0,250" fill="url(#ceil)"/>
+  <polygon points="0,250 560,330 560,600 0,600" fill="url(#wall)"/>
+  <polygon points="560,330 800,300 800,600 560,600" fill="#cfc8ba"/>
+  <line x1="0" y1="250" x2="560" y2="330" stroke="#bdb6a8" stroke-width="3"/>
+  <line x1="560" y1="330" x2="560" y2="600" stroke="#bdb6a8" stroke-width="3"/>
+  <g filter="url(#soft)">
+    <ellipse cx="455" cy="150" rx="150" ry="95" fill="url(#stain)"/>
+    <ellipse cx="455" cy="150" rx="125" ry="78" fill="none" stroke="#7a5528" stroke-opacity=".45" stroke-width="5"/>
+    <ellipse cx="450" cy="148" rx="92" ry="56" fill="none" stroke="#7a5528" stroke-opacity=".35" stroke-width="4"/>
+  </g>
+  <circle cx="330" cy="120" r="26" fill="#f8f6f0" stroke="#c9c3b6" stroke-width="3"/>
+  <line x1="330" y1="94" x2="330" y2="40" stroke="#9a9488" stroke-width="3"/>
+  <path d="M95 595 L120 540 L112 505 L140 470 L133 440 L158 405" fill="none" stroke="#4a443a" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M120 540 L98 522" fill="none" stroke="#4a443a" stroke-width="2"/>
+  <rect x="610" y="390" width="140" height="150" fill="#9ec7e6" stroke="#f4f2ec" stroke-width="10"/>
+  <line x1="680" y1="390" x2="680" y2="540" stroke="#f4f2ec" stroke-width="6"/>
+</svg>

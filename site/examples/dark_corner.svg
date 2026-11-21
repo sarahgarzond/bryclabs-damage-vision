@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs><filter id="b"><feGaussianBlur stdDeviation="9"/></filter></defs>
+  <rect width="800" height="600" fill="#2b2924"/>
+  <g filter="url(#b)">
+    <polygon points="0,0 430,0 430,600 0,600" fill="#3d3a33"/>
+    <polygon points="430,0 800,0 800,600 430,600" fill="#34312b"/>
+    <path d="M180 60 L205 150 L190 230 L215 320" stroke="#1d1b17" stroke-width="5" fill="none"/>
+    <ellipse cx="620" cy="460" rx="90" ry="60" fill="#25231e"/>
+  </g>
+</svg>

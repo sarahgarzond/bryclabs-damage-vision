@@ -7,3 +7,6 @@ gradio>=4.44
 scikit-learn>=1.4
 matplotlib>=3.8
 pytest>=8.0
+fastapi>=0.110          # app/api.py for the GitHub Pages site
+uvicorn>=0.29
+python-multipart>=0.0.9

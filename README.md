@@ -8,13 +8,21 @@ We extract policy-relevant evidence from a photo, check it, say how confident we
 
 ```bash
 pip install -r requirements.txt
-pytest                                                    # 11 tests
+pytest                                                    # 14 tests
 python scripts/export_schema.py                           # writes schema/*.schema.json
 python scripts/run.py --images data/images --out outputs/demo --backend mock --no-verify
 DV_BACKEND=mock DV_VERIFY=0 python app/app.py             # website on http://localhost:7860
 ```
 
 The `mock` backend returns fake but valid output. Use it to develop the UI and the evaluation code before the GPU is ready. Its output is marked and must never be reported as a result.
+
+## Demo website (GitHub Pages)
+
+`site/` is a static site that GitHub Pages hosts for free. It shows bundled examples, the evaluation results, and runs live analysis when it is connected to `app/api.py`. Setup steps are in [docs/deploy_site.md](docs/deploy_site.md):
+
+1. Repo Settings → Pages → Source: **GitHub Actions**. After that, every push that changes `site/` redeploys it.
+2. Next to the model, run `uvicorn app.api:app --port 8080` and `cloudflared tunnel --url http://localhost:8080`.
+3. On the site, click the status button and paste the https tunnel address.
 
 ## Real run (GPU)
 
@@ -64,7 +72,8 @@ Without supplied labels, we build our own gold set. The labelling instructions a
 ```
 src/damagevision/   schema, prompt, backends, pipeline, verifier, consistency, readiness, evaluation
 scripts/            run, evaluate, agreement, robustness, calibrate, make_images_csv, merge_gold, export_schema
-app/                app.py (demo website), label_app.py (labelling tool)
+app/                api.py (API for the site), app.py (Gradio demo), label_app.py (labelling tool)
+site/               static demo website for GitHub Pages
 docs/               method, labelling guide, AWS setup, team tasks
 data/               images (not committed) + images.csv
 labels/             per-labeller labels, adjudicated, gold

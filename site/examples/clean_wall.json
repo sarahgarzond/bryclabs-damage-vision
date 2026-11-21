@@ -1,0 +1,38 @@
+{
+  "image_id": "clean_wall",
+  "width": 800,
+  "height": 600,
+  "damage_present": "no",
+  "image_quality": "good",
+  "quality_issues": [],
+  "scene": "interior",
+  "findings": [],
+  "limitations": [
+    "Only the visible wall section was assessed"
+  ],
+  "dropped_findings": [],
+  "meta": {
+    "model": "illustrative",
+    "backend": "illustrative",
+    "runs": 3,
+    "runtime_s": 0.0,
+    "seconds_per_run": [],
+    "verifier": null,
+    "verifier_s": null,
+    "device": null,
+    "tokens": null,
+    "est_cost_usd": null,
+    "errors": []
+  },
+  "status": "ok",
+  "readiness": {
+    "established": [],
+    "indicated": [],
+    "missing": [
+      "Only the visible wall section was assessed"
+    ],
+    "follow_up_requests": [],
+    "claim_text_consistency": [],
+    "note": "Evidence summary only. Coverage is decided by the policy check and human review."
+  }
+}

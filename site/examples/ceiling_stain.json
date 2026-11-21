@@ -1,0 +1,123 @@
+{
+  "image_id": "ceiling_stain",
+  "width": 800,
+  "height": 600,
+  "damage_present": "yes",
+  "image_quality": "good",
+  "quality_issues": [],
+  "scene": "interior",
+  "findings": [
+    {
+      "damage_type": "water_stain",
+      "component": "ceiling",
+      "material": "paint",
+      "location": "upper centre right, next to light fitting",
+      "visible_traits": [
+        "brown discoloration",
+        "darker concentric rings"
+      ],
+      "extent": "medium",
+      "age_indicators": [
+        "tide_marks"
+      ],
+      "status": "visible",
+      "uncertain": false,
+      "bbox": [
+        300.0,
+        52.0,
+        312.0,
+        196.0
+      ],
+      "notes": null,
+      "confidence": 0.91,
+      "agreement": 1.0,
+      "verified": true,
+      "verifier_score": 0.42
+    },
+    {
+      "damage_type": "crack",
+      "component": "wall",
+      "material": "unknown",
+      "location": "lower left wall",
+      "visible_traits": [
+        "thin branching line",
+        "about 30 cm long"
+      ],
+      "extent": "small",
+      "age_indicators": [
+        "none_visible"
+      ],
+      "status": "inferred",
+      "uncertain": true,
+      "bbox": [
+        86.0,
+        396.0,
+        82.0,
+        204.0
+      ],
+      "notes": "could also be a paint edge",
+      "confidence": 0.48,
+      "agreement": 0.67,
+      "verified": false,
+      "verifier_score": 0.09
+    }
+  ],
+  "limitations": [
+    "Cause not assessable",
+    "Whether the stain is still wet not assessable"
+  ],
+  "dropped_findings": [
+    {
+      "damage_type": "mould",
+      "component": "ceiling",
+      "material": "unknown",
+      "location": null,
+      "visible_traits": [],
+      "extent": "unknown",
+      "age_indicators": [],
+      "status": "inferred",
+      "uncertain": true,
+      "bbox": null,
+      "notes": null,
+      "confidence": null,
+      "agreement": 0.33,
+      "verified": false,
+      "verifier_score": null
+    }
+  ],
+  "meta": {
+    "model": "illustrative",
+    "backend": "illustrative",
+    "runs": 3,
+    "runtime_s": 0.0,
+    "seconds_per_run": [],
+    "verifier": null,
+    "verifier_s": null,
+    "device": null,
+    "tokens": null,
+    "est_cost_usd": null,
+    "errors": []
+  },
+  "status": "ok",
+  "readiness": {
+    "established": [
+      "water stain on ceiling (medium extent, confidence 0.91)"
+    ],
+    "indicated": [
+      "Possible long-term damage indicators at water stain on ceiling: tide marks",
+      "crack on wall (inferred, confidence 0.48)"
+    ],
+    "missing": [
+      "Cause not assessable",
+      "Whether the stain is still wet not assessable"
+    ],
+    "follow_up_requests": [
+      "Close-up of the crack on wall so the material can be identified",
+      "Sharp, well lit close-up of the crack on wall to confirm it"
+    ],
+    "claim_text_consistency": [
+      "Reported water: visual indicators present (water_stain)"
+    ],
+    "note": "Evidence summary only. Coverage is decided by the policy check and human review."
+  }
+}
