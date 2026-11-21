@@ -1,0 +1,217 @@
+{
+  "properties": {
+    "damage_present": {
+      "enum": [
+        "yes",
+        "no",
+        "unclear"
+      ],
+      "title": "DamagePresent",
+      "type": "string"
+    },
+    "image_quality": {
+      "enum": [
+        "good",
+        "limited",
+        "poor"
+      ],
+      "title": "ImageQuality",
+      "type": "string"
+    },
+    "quality_issues": {
+      "items": {
+        "enum": [
+          "blur",
+          "dark",
+          "overexposed",
+          "too_far",
+          "partial_view",
+          "obstructed",
+          "low_resolution"
+        ],
+        "title": "QualityIssue",
+        "type": "string"
+      },
+      "title": "Quality Issues",
+      "type": "array"
+    },
+    "scene": {
+      "enum": [
+        "interior",
+        "exterior",
+        "not_a_building"
+      ],
+      "title": "Scene",
+      "type": "string"
+    },
+    "findings": {
+      "items": {
+        "description": "One damage finding as emitted by the VLM. Box is normalised 0..1000 [x1, y1, x2, y2].",
+        "properties": {
+          "damage_type": {
+            "enum": [
+              "crack",
+              "water_stain",
+              "mould",
+              "flaking_paint",
+              "plaster_loss",
+              "hole",
+              "swelling",
+              "rot",
+              "rust",
+              "scorch",
+              "broken_glass",
+              "detachment",
+              "other"
+            ],
+            "title": "DamageType",
+            "type": "string"
+          },
+          "component": {
+            "enum": [
+              "wall",
+              "ceiling",
+              "floor",
+              "window",
+              "door",
+              "frame",
+              "roof",
+              "facade",
+              "pipe",
+              "stairs",
+              "other",
+              "unknown"
+            ],
+            "title": "Component",
+            "type": "string"
+          },
+          "material": {
+            "enum": [
+              "plaster",
+              "paint",
+              "wallpaper",
+              "wood",
+              "tile",
+              "concrete",
+              "brick",
+              "glass",
+              "metal",
+              "plastic",
+              "other",
+              "unknown"
+            ],
+            "title": "Material",
+            "type": "string"
+          },
+          "location": {
+            "description": "Short position in the image, e.g. 'lower left wall, near window'",
+            "title": "Location",
+            "type": "string"
+          },
+          "visible_traits": {
+            "description": "Observable details only",
+            "items": {
+              "type": "string"
+            },
+            "title": "Visible Traits",
+            "type": "array"
+          },
+          "extent": {
+            "enum": [
+              "small",
+              "medium",
+              "large",
+              "unknown"
+            ],
+            "title": "Extent",
+            "type": "string"
+          },
+          "age_indicators": {
+            "items": {
+              "enum": [
+                "tide_marks",
+                "multiple_layers",
+                "old_repair",
+                "mould_growth",
+                "corrosion",
+                "none_visible"
+              ],
+              "title": "AgeIndicator",
+              "type": "string"
+            },
+            "title": "Age Indicators",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "visible",
+              "inferred",
+              "not_assessable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "uncertain": {
+            "title": "Uncertain",
+            "type": "boolean"
+          },
+          "bbox_1000": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "[x1, y1, x2, y2] normalised to 0..1000, null if not locatable",
+            "title": "Bbox 1000"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          }
+        },
+        "required": [
+          "damage_type",
+          "component",
+          "material",
+          "location",
+          "extent",
+          "status",
+          "uncertain"
+        ],
+        "title": "ModelFinding",
+        "type": "object"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "damage_present",
+    "image_quality",
+    "scene"
+  ],
+  "title": "ModelOutput",
+  "type": "object"
+}

@@ -1,0 +1,8 @@
+# GPU machine (AWS / Colab / Kaggle): local model + verifier
+-r requirements.txt
+torch>=2.3
+transformers>=4.49
+accelerate>=0.33
+bitsandbytes>=0.43      # only for --load-4bit
+# serving on AWS (separate venv recommended, vLLM pins its own torch):
+# pip install vllm

@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+.DS_Store
+.env
+# images are shared via the team drive, not git (size + licences); keep the folder
+data/images/*
+!data/images/.gitkeep
+data/variants/
+# raw run outputs are reproducible; commit only the final ones you report
+outputs/*
+!outputs/.gitkeep
+!outputs/final/
+!outputs/eval/
+*.safetensors
+*.bin
+.pytest_cache/

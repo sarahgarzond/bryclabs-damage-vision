@@ -1,0 +1,9 @@
+# core (CPU is fine): schema, evaluation, website, labelling app, OpenAI-compatible client
+pydantic>=2.6
+pillow>=10.0
+numpy>=1.26
+openai>=1.40
+gradio>=4.44
+scikit-learn>=1.4
+matplotlib>=3.8
+pytest>=8.0

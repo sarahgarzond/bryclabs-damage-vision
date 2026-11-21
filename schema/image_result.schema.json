@@ -1,0 +1,634 @@
+{
+  "properties": {
+    "image_id": {
+      "title": "Image Id",
+      "type": "string"
+    },
+    "width": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Width"
+    },
+    "height": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Height"
+    },
+    "damage_present": {
+      "enum": [
+        "yes",
+        "no",
+        "unclear"
+      ],
+      "title": "DamagePresent",
+      "type": "string"
+    },
+    "image_quality": {
+      "enum": [
+        "good",
+        "limited",
+        "poor"
+      ],
+      "title": "ImageQuality",
+      "type": "string"
+    },
+    "quality_issues": {
+      "items": {
+        "enum": [
+          "blur",
+          "dark",
+          "overexposed",
+          "too_far",
+          "partial_view",
+          "obstructed",
+          "low_resolution"
+        ],
+        "title": "QualityIssue",
+        "type": "string"
+      },
+      "title": "Quality Issues",
+      "type": "array"
+    },
+    "scene": {
+      "enum": [
+        "interior",
+        "exterior",
+        "not_a_building"
+      ],
+      "title": "Scene",
+      "type": "string"
+    },
+    "findings": {
+      "items": {
+        "description": "Final finding. bbox is pixels [x, y, width, height] on the original image.",
+        "properties": {
+          "damage_type": {
+            "enum": [
+              "crack",
+              "water_stain",
+              "mould",
+              "flaking_paint",
+              "plaster_loss",
+              "hole",
+              "swelling",
+              "rot",
+              "rust",
+              "scorch",
+              "broken_glass",
+              "detachment",
+              "other"
+            ],
+            "title": "DamageType",
+            "type": "string"
+          },
+          "component": {
+            "enum": [
+              "wall",
+              "ceiling",
+              "floor",
+              "window",
+              "door",
+              "frame",
+              "roof",
+              "facade",
+              "pipe",
+              "stairs",
+              "other",
+              "unknown"
+            ],
+            "title": "Component",
+            "type": "string"
+          },
+          "material": {
+            "enum": [
+              "plaster",
+              "paint",
+              "wallpaper",
+              "wood",
+              "tile",
+              "concrete",
+              "brick",
+              "glass",
+              "metal",
+              "plastic",
+              "other",
+              "unknown"
+            ],
+            "title": "Material",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Location"
+          },
+          "visible_traits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Visible Traits",
+            "type": "array"
+          },
+          "extent": {
+            "enum": [
+              "small",
+              "medium",
+              "large",
+              "unknown"
+            ],
+            "title": "Extent",
+            "type": "string",
+            "default": "unknown"
+          },
+          "age_indicators": {
+            "items": {
+              "enum": [
+                "tide_marks",
+                "multiple_layers",
+                "old_repair",
+                "mould_growth",
+                "corrosion",
+                "none_visible"
+              ],
+              "title": "AgeIndicator",
+              "type": "string"
+            },
+            "title": "Age Indicators",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "visible",
+              "inferred",
+              "not_assessable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "uncertain": {
+            "title": "Uncertain",
+            "type": "boolean"
+          },
+          "bbox": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bbox"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Confidence"
+          },
+          "agreement": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "share of runs that found it",
+            "title": "Agreement"
+          },
+          "verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "detector found it at the claimed place",
+            "title": "Verified"
+          },
+          "verifier_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Verifier Score"
+          }
+        },
+        "required": [
+          "damage_type",
+          "component",
+          "material",
+          "status",
+          "uncertain"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "dropped_findings": {
+      "description": "removed as unsupported, kept for transparency",
+      "items": {
+        "description": "Final finding. bbox is pixels [x, y, width, height] on the original image.",
+        "properties": {
+          "damage_type": {
+            "enum": [
+              "crack",
+              "water_stain",
+              "mould",
+              "flaking_paint",
+              "plaster_loss",
+              "hole",
+              "swelling",
+              "rot",
+              "rust",
+              "scorch",
+              "broken_glass",
+              "detachment",
+              "other"
+            ],
+            "title": "DamageType",
+            "type": "string"
+          },
+          "component": {
+            "enum": [
+              "wall",
+              "ceiling",
+              "floor",
+              "window",
+              "door",
+              "frame",
+              "roof",
+              "facade",
+              "pipe",
+              "stairs",
+              "other",
+              "unknown"
+            ],
+            "title": "Component",
+            "type": "string"
+          },
+          "material": {
+            "enum": [
+              "plaster",
+              "paint",
+              "wallpaper",
+              "wood",
+              "tile",
+              "concrete",
+              "brick",
+              "glass",
+              "metal",
+              "plastic",
+              "other",
+              "unknown"
+            ],
+            "title": "Material",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Location"
+          },
+          "visible_traits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Visible Traits",
+            "type": "array"
+          },
+          "extent": {
+            "enum": [
+              "small",
+              "medium",
+              "large",
+              "unknown"
+            ],
+            "title": "Extent",
+            "type": "string",
+            "default": "unknown"
+          },
+          "age_indicators": {
+            "items": {
+              "enum": [
+                "tide_marks",
+                "multiple_layers",
+                "old_repair",
+                "mould_growth",
+                "corrosion",
+                "none_visible"
+              ],
+              "title": "AgeIndicator",
+              "type": "string"
+            },
+            "title": "Age Indicators",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "visible",
+              "inferred",
+              "not_assessable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "uncertain": {
+            "title": "Uncertain",
+            "type": "boolean"
+          },
+          "bbox": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bbox"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Confidence"
+          },
+          "agreement": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "share of runs that found it",
+            "title": "Agreement"
+          },
+          "verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "detector found it at the claimed place",
+            "title": "Verified"
+          },
+          "verifier_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Verifier Score"
+          }
+        },
+        "required": [
+          "damage_type",
+          "component",
+          "material",
+          "status",
+          "uncertain"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
+      "title": "Dropped Findings",
+      "type": "array"
+    },
+    "meta": {
+      "anyOf": [
+        {
+          "properties": {
+            "model": {
+              "title": "Model",
+              "type": "string"
+            },
+            "backend": {
+              "title": "Backend",
+              "type": "string"
+            },
+            "runs": {
+              "title": "Runs",
+              "type": "integer"
+            },
+            "runtime_s": {
+              "title": "Runtime S",
+              "type": "number"
+            },
+            "seconds_per_run": {
+              "items": {
+                "type": "number"
+              },
+              "title": "Seconds Per Run",
+              "type": "array"
+            },
+            "verifier": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Verifier"
+            },
+            "verifier_s": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Verifier S"
+            },
+            "device": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Device"
+            },
+            "tokens": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Tokens"
+            },
+            "est_cost_usd": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Est Cost Usd"
+            },
+            "errors": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Errors",
+              "type": "array"
+            }
+          },
+          "required": [
+            "model",
+            "backend",
+            "runs",
+            "runtime_s"
+          ],
+          "title": "RunMeta",
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "status": {
+      "default": "ok",
+      "description": "'ok' or 'error'",
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "image_id",
+    "damage_present",
+    "image_quality",
+    "scene"
+  ],
+  "title": "ImageResult",
+  "type": "object"
+}
