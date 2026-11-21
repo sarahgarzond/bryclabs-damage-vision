@@ -46,7 +46,7 @@ def main():
     if a.eval:
         data = SITE / "data"
         data.mkdir(exist_ok=True)
-        for name in ["metrics.json", "agreement.json", "robustness.png", "calibration.png"]:
+        for name in ["metrics.json", "agreement.json", "comparison.json", "robustness.png", "calibration.png"]:
             src = Path(a.eval) / name
             if src.exists():
                 shutil.copy(src, data / name)

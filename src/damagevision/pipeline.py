@@ -111,7 +111,7 @@ class Pipeline:
 
         meta = RunMeta(model=self.backend.model, backend=self.backend.name, runs=self.cfg.runs,
                        runtime_s=0.0, seconds_per_run=per_run, device=_device_name(),
-                       tokens=tokens or None, errors=errors)
+                       tokens=tokens or None, errors=errors, calibrated=self.calib is not None)
         if not outputs:
             meta.runtime_s = round(time.perf_counter() - t0, 3)
             return error_result(image_id, "; ".join(errors) or "no valid output", meta)

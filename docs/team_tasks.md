@@ -24,8 +24,16 @@ python scripts/evaluate.py --pred outputs/qwen7b --gold labels/gold --images-csv
 python scripts/calibrate.py --pred outputs/qwen7b --gold labels/gold --out outputs/eval/main
 python scripts/robustness.py --images data/images --limit 20 --backend openai --out outputs/eval/main
 ```
-Baselines: run `scripts/run.py` with `--runs 1 --no-verify` (no self-consistency, no verifier) and with a hosted
-model (`--backend openai --base-url <api> --model <name>`), evaluate each into its own folder. CLIP baseline: TODO.
+Baselines and the comparison table (shown in the website's info drawer):
+```bash
+python scripts/baseline_clip.py --images data/images --out outputs/baseline_clip
+python scripts/run.py --images data/images --out outputs/qwen_1run --runs 1 --no-verify
+python scripts/compare.py --gold labels/gold --out outputs/eval/main/comparison.json \
+  --setup "CLIP zero-shot=outputs/baseline_clip" --setup "VLM, 1 run, no checks=outputs/qwen_1run" \
+  --setup "Full pipeline=outputs/qwen7b"
+python scripts/build_site.py --eval outputs/eval/main      # publishes metrics, CIs and comparison to the site
+```
+`evaluate.py` now writes 95% bootstrap ranges (`ci95`). Fill `docs/report.md` from these files only.
 Develop everything now against mock data: `--backend mock`.
 
 ## Eva: website, schema, reproducibility

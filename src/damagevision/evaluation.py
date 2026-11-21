@@ -136,8 +136,53 @@ def evaluate(preds: dict[str, dict], golds: dict[str, dict], groups: dict[str, s
         "runtime_s_per_image": {"mean": _safe(sum(runtimes), len(runtimes)),
                                 "max": max(runtimes) if runtimes else None},
         "by_group": groups_out,
+        "ci95": bootstrap_ci(preds, golds),
         "per_image": per_image,
     }
+
+
+# --------------------------------------------------------------------------- bootstrap
+
+
+def _counts(preds: dict[str, dict], golds: dict[str, dict], ids: list[str]) -> dict:
+    tp = fp = fn = neg = negp = 0
+    for iid in ids:
+        pf, gf = preds[iid].get("findings", []), golds[iid].get("findings", [])
+        m, up, ug = match_findings(pf, gf)
+        tp, fp, fn = tp + len(m), fp + len(up), fn + len(ug)
+        if golds[iid].get("damage_present") == "no":
+            neg += 1
+            negp += int(len(pf) > 0)
+    p = tp / (tp + fp) if tp + fp else None
+    r = tp / (tp + fn) if tp + fn else None
+    f1 = 2 * p * r / (p + r) if p and r else None
+    return {"precision": p, "recall": r, "f1": f1, "hallucination_rate": negp / neg if neg else None}
+
+
+def bootstrap_ci(preds: dict[str, dict], golds: dict[str, dict], n: int = 1000, seed: int = 0,
+                 level: float = 0.95) -> dict:
+    """Percentile bootstrap over images. Shows how much the headline numbers could move with
+    a different sample of 100 photos. It does not cover label errors or domain shift."""
+    import random
+
+    ids = sorted(set(preds) & set(golds))
+    if len(ids) < 5:
+        return {}
+    rng = random.Random(seed)
+    samples: dict[str, list[float]] = defaultdict(list)
+    for _ in range(n):
+        draw = [rng.choice(ids) for _ in ids]
+        for k, v in _counts(preds, golds, draw).items():
+            if v is not None:
+                samples[k].append(v)
+    lo_q, hi_q = (1 - level) / 2, 1 - (1 - level) / 2
+    out = {}
+    for k, vals in samples.items():
+        vals.sort()
+        out[k] = [round(vals[int(lo_q * (len(vals) - 1))], 4), round(vals[int(hi_q * (len(vals) - 1))], 4)]
+    out["n_bootstrap"] = n
+    out["level"] = level
+    return out
 
 
 # --------------------------------------------------------------------------- labeller agreement

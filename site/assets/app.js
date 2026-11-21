@@ -107,7 +107,7 @@
 
   /* ---------- render ---------- */
   function render(res, source) {
-    state.result = res;
+    state.result = res; state.source = source;
     const img = $("#photo");
     const draw = () => drawBoxes(res, img);
     if (img.complete && img.naturalWidth) draw(); else img.onload = draw;
@@ -119,9 +119,10 @@
 
     const m = res.meta || {};
     $("#meta").textContent = [
-      `${(res.findings || []).length} findings`, `damage ${res.damage_present}`,
+      `${(res.findings || []).length} finding${(res.findings || []).length === 1 ? "" : "s"}`, `damage ${res.damage_present}`,
       m.runtime_s ? `${Number(m.runtime_s).toFixed(1)} s` : "", m.model && m.model !== m.backend ? String(m.model).split("/").pop() : "",
     ].filter(Boolean).join(" · ");
+    renderCaveats(res, source);
     $("#json").innerHTML = highlight(JSON.stringify(res, null, 2));
     $("#out").hidden = false;
     $("#out").scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -174,11 +175,91 @@
     try { await navigator.clipboard.writeText(JSON.stringify(state.result, null, 2)); toast("JSON copied"); } catch { toast("Copy not allowed here"); }
   };
 
+  /* ---------- per-result caveats: the system states its own blind spots ---------- */
+  function caveatsFor(res, source) {
+    const c = [], m = res.meta || {}, fs = res.findings || [];
+    if (source === "illustrative") c.push("This is a hand-made illustration of the output format. Nothing here was measured.");
+    if (m.backend === "mock") c.push("Mock model: the findings are fake.");
+    if (res.status === "error") c.push("The model failed on this photo. No findings should be trusted.");
+    if (!state.metrics) c.push("The model has not been validated on labelled photos yet. Treat every finding as unverified.");
+    if (!m.calibrated && source !== "illustrative") c.push("Confidence percentages are a heuristic, not calibrated against labelled photos.");
+    if (m.runs === 1) c.push("Single run: no consistency check across repeated runs.");
+    if (m.backend && m.backend !== "illustrative" && !m.verifier) c.push("No independent detector checked these findings.");
+    const unc = fs.filter((f) => f.uncertain).length;
+    if (unc) c.push(`${unc} of ${fs.length} findings are uncertain: low agreement between runs or not confirmed by the detector.`);
+    const unconfirmed = fs.filter((f) => f.verified === false).length;
+    if (unconfirmed) c.push(`${unconfirmed} finding${unconfirmed > 1 ? "s were" : " was"} not found by the detector at the claimed position.`);
+    if (res.image_quality && res.image_quality !== "good") c.push(`Photo quality is ${res.image_quality}${res.quality_issues?.length ? " (" + res.quality_issues.join(", ").replace(/_/g, " ") + ")" : ""}: damage may be missed or misread.`);
+    if (res.damage_present === "unclear") c.push("The system could not decide whether damage is present.");
+    if (res.damage_present === "no") c.push("No damage found means none was visible in this frame, not that the property is undamaged.");
+    if (fs.some((f) => f.material === "unknown")) c.push("Material could not be identified for at least one finding.");
+    if (fs.some((f) => f.bbox == null) && fs.length) c.push("At least one finding has no location in the image.");
+    if (res.dropped_findings?.length) c.push(`${res.dropped_findings.length} possible finding${res.dropped_findings.length > 1 ? "s were" : " was"} dropped as unsupported. It may still be real.`);
+    (res.limitations || []).forEach((l) => c.push("Model: " + l));
+    c.push("Cause, wetness, depth and hidden damage cannot be judged from one photo.");
+    c.push("This is evidence for a reviewer, not a coverage decision.");
+    return [...new Set(c)];
+  }
+  function renderCaveats(res, source) {
+    const list = caveatsFor(res, source);
+    $("#caveatBtn").textContent = `${list.length} caveats`;
+    $("#caveatList").innerHTML = list.map((x) => `<li>${esc(x)}</li>`).join("");
+    $("#caveatPop").hidden = true; $("#caveatBtn").setAttribute("aria-expanded", "false");
+  }
+  $("#caveatBtn").onclick = (e) => {
+    e.stopPropagation();
+    const pop = $("#caveatPop"); pop.hidden = !pop.hidden; $("#caveatBtn").setAttribute("aria-expanded", String(!pop.hidden));
+  };
+  document.addEventListener("click", (e) => { if (!e.target.closest(".caveat-wrap")) $("#caveatPop").hidden = true; });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("#caveatPop").hidden = true; });
+
+  /* ---------- reliability drawer: only measured numbers, never placeholders ---------- */
+  const pct = (v) => (v == null ? "–" : Math.round(v * 100) + "%");
+  async function loadJSON(path) { try { const r = await fetch(path, { cache: "no-cache" }); return r.ok ? await r.json() : null; } catch { return null; } }
+  async function loadReliability() {
+    [state.metrics, state.comparison, state.agreement] = await Promise.all(
+      [loadJSON("data/metrics.json"), loadJSON("data/comparison.json"), loadJSON("data/agreement.json")]);
+    const m = state.metrics, v = $("#verdict");
+    if (!m) {
+      v.textContent = "Not yet validated on labelled photos. Until it is, treat every result as unverified.";
+      v.className = "verdict warn";
+      $("#accuracy").innerHTML = `<p class="label">Accuracy</p><p class="empty">Measured accuracy appears here once the 100 hand-labelled test photos are scored. We do not show numbers we have not measured.</p>`;
+    } else {
+      const k = state.agreement?.kappa_damage_type_presence;
+      v.textContent = `Tested on ${m.images_evaluated} hand-labelled photos.` + (k != null ? ` Two humans agree with kappa ${k.toFixed(2)}.` : "");
+      v.className = "verdict";
+      const ci = m.ci95 || {};
+      const row = (name, val, range, note, lowerIsBetter) => {
+        const r = range ? `<div class="range"><i style="left:${range[0] * 100}%;width:${Math.max(1, (range[1] - range[0]) * 100)}%"></i>${val != null ? `<em style="left:${val * 100}%"></em>` : ""}</div>` : "";
+        const wide = range && range[1] - range[0] > 0.3 ? "Too few photos to pin this number down. " : "";
+        const rtxt = range ? `95% range ${pct(range[0])} to ${pct(range[1])}. ${wide}` : "";
+        return `<div class="acc-row"><div class="acc-top"><b>${name}</b><span>${pct(val)}</span></div>${r}<small>${rtxt}${note}${lowerIsBetter ? " Lower is better." : ""}</small></div>`;
+      };
+      $("#accuracy").innerHTML = `<p class="label">Accuracy</p><div class="acc">
+        ${row("Precision", m.findings?.precision, ci.precision, "Share of reported findings that are real.")}
+        ${row("Recall", m.findings?.recall, ci.recall, "Share of real damage that was found.")}
+        ${row("Invented damage on clean photos", m.negatives?.hallucination_rate, ci.hallucination_rate, `${m.negatives?.with_any_finding ?? "–"} of ${m.negatives?.images ?? "–"} undamaged photos got a finding.`, true)}
+        ${m.uncertainty?.flagged_share_wrong != null ? row("Wrong findings flagged uncertain", m.uncertainty.flagged_share_wrong, null, "Does the system know when it is wrong?") : ""}
+      </div>`;
+    }
+    const c = state.comparison;
+    $("#comparison").innerHTML = `<p class="label">Compared with simpler setups</p>` + (c?.setups?.length
+      ? `<table class="cmp"><thead><tr><th>Setup</th><th>Precision</th><th>Recall</th><th>Invented</th><th>s/img</th></tr></thead><tbody>${
+          c.setups.map((r) => `<tr class="${/full pipeline/i.test(r.setup) ? "ours" : ""}"><td>${esc(r.setup)}</td><td>${pct(r.precision)}</td><td>${pct(r.recall)}</td><td>${pct(r.hallucination_rate)}</td><td>${r.s_per_image != null ? r.s_per_image.toFixed(1) : "–"}</td></tr>`).join("")
+        }</tbody></table>`
+      : `<p class="empty">The comparison against a CLIP baseline, a single unchecked run and a frontier model appears here once measured.</p>`);
+  }
+  const drawer = $("#infoDrawer");
+  $("#infoBtn").onclick = () => drawer.showModal();
+  $("#infoClose").onclick = () => drawer.close();
+  drawer.addEventListener("click", (e) => { if (e.target === drawer) drawer.close(); });
+
   let tt;
   function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 3000); }
 
   const qs = new URLSearchParams(location.search).get("api");
   if (qs) store.set("dv_api", normalise(qs));
+  loadReliability().then(() => { if (state.result) renderCaveats(state.result, state.source); });
   loadExamples();
   connect(store.get("dv_api"), true);
 })();

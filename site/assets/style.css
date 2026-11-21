@@ -129,3 +129,50 @@ img { display: block; max-width: 100%; }
   border-radius: 12px; font-size: 14px; opacity: 0; pointer-events: none; transition: .2s; z-index: 50; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* info dot + drawer */
+.top-actions { display: flex; gap: 8px; align-items: center; }
+.info-dot { position: relative; width: 38px; height: 38px; border-radius: 50%; border: 0; cursor: pointer; color: #fff;
+  font: italic 700 17px Georgia, "Times New Roman", serif; background: var(--grad); box-shadow: 0 8px 20px -8px rgba(109, 40, 217, .7); }
+.info-dot .ring { position: absolute; inset: -4px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--a2) 45%, transparent); animation: ring 2.6s ease-out infinite; }
+@keyframes ring { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
+.info-dot:hover { filter: brightness(1.1); }
+.drawer { margin: 0 0 0 auto; height: 100vh; max-height: 100vh; width: min(460px, 100vw); border: 0; border-left: 1px solid var(--border);
+  padding: 0; background: var(--surface); color: var(--text); box-shadow: -20px 0 60px -20px rgba(49, 31, 120, .35); }
+.drawer[open] { animation: slide .22s ease-out; }
+@keyframes slide { from { transform: translateX(40px); opacity: 0; } }
+.drawer::backdrop { background: rgba(13, 11, 31, .45); backdrop-filter: blur(2px); }
+.drawer-body { padding: 28px 26px 40px; position: relative; }
+.drawer-close { position: absolute; top: 16px; right: 16px; width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; }
+.drawer-close:hover { color: var(--text); border-color: var(--accent); }
+.verdict { font-size: 19px; font-weight: 700; letter-spacing: -.02em; line-height: 1.35; margin: 4px 40px 20px 0; }
+.verdict.warn { color: var(--uncertain); }
+.label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 22px 0 10px; }
+.acc { display: grid; gap: 10px; }
+.acc-row { border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; background: var(--surface-2); }
+.acc-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.acc-top b { font-size: 14.5px; }
+.acc-top span { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.range { position: relative; height: 8px; border-radius: 99px; background: var(--border); margin: 10px 0 6px; }
+.range i { position: absolute; top: 0; bottom: 0; border-radius: 99px; background: color-mix(in srgb, var(--a2) 35%, transparent); }
+.range em { position: absolute; top: -3px; width: 4px; height: 14px; border-radius: 2px; background: var(--accent); transform: translateX(-2px); }
+.acc-row small { color: var(--muted); font-size: 12.5px; }
+.cmp { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.cmp th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 6px 6px; border-bottom: 1px solid var(--border); }
+.cmp td { padding: 8px 6px; border-bottom: 1px solid var(--border); }
+.cmp td:not(:first-child), .cmp th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.cmp tr.ours td { font-weight: 700; color: var(--accent); }
+.empty { color: var(--muted); font-size: 14px; border: 1px dashed var(--border); border-radius: 12px; padding: 14px; }
+.limits ul { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 8px; color: var(--text); }
+
+/* per-result caveats */
+.caveat-wrap { position: relative; }
+.caveat-chip { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 9px 14px; cursor: pointer; font: 600 13.5px Inter, sans-serif;
+  color: var(--uncertain); background: color-mix(in srgb, var(--uncertain) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--uncertain) 35%, transparent); }
+.caveat-chip::before { content: "!"; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--uncertain); color: #fff; font-size: 12px; font-weight: 800; }
+.caveat-pop { position: absolute; z-index: 30; top: calc(100% + 8px); left: 0; width: min(420px, 86vw); background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
+.caveat-pop ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: grid; gap: 6px; }
+.pop-title { margin: 0 0 8px; font-weight: 700; font-size: 14px; }
+@media (max-width: 640px) { .caveat-pop { left: auto; right: -40px; } }

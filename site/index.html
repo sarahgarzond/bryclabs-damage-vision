@@ -9,15 +9,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=5">
+  <link rel="stylesheet" href="assets/style.css?v=7">
 </head>
 <body>
   <header class="top">
     <span class="brand">Damage Evidence</span>
+    <div class="top-actions">
+    <button class="info-dot" id="infoBtn" type="button" aria-haspopup="dialog" aria-label="How reliable is this?" title="How reliable is this?">
+      <span class="ring" aria-hidden="true"></span>i
+    </button>
     <button class="status" id="statusPill" type="button" aria-haspopup="dialog" aria-label="Model settings" title="Model settings">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
       <span class="dot" aria-hidden="true"></span><span id="statusText" class="sr-only">Model settings</span>
     </button>
+    </div>
   </header>
 
   <main class="page">
@@ -47,6 +52,13 @@
         </button>
         <button class="btn" id="jsonBtn" type="button">Download JSON</button>
         <button class="btn" id="copyBtn" type="button">Copy JSON</button>
+        <div class="caveat-wrap">
+          <button class="caveat-chip" id="caveatBtn" type="button" aria-expanded="false" aria-controls="caveatPop"></button>
+          <div class="caveat-pop" id="caveatPop" role="dialog" aria-label="Caveats for this result" hidden>
+            <p class="pop-title">What this result cannot tell you</p>
+            <ul id="caveatList"></ul>
+          </div>
+        </div>
         <span class="meta" id="meta"></span>
       </div>
       <pre class="json" id="json"></pre>
@@ -68,7 +80,28 @@
     </form>
   </dialog>
 
+  <dialog id="infoDrawer" class="drawer" aria-label="How reliable is this?">
+    <div class="drawer-body">
+      <button class="drawer-close" id="infoClose" type="button" aria-label="Close">×</button>
+      <p class="verdict" id="verdict"></p>
+      <div id="accuracy"></div>
+      <div id="comparison"></div>
+      <div class="limits">
+        <p class="label">Known limits</p>
+        <ul>
+          <li>Accuracy is only as good as our labels: two humans agree on damage types with the kappa shown above, so higher scores than that mean little.</li>
+          <li>The test set is small. The ranges show how much each number could move with a different sample of photos.</li>
+          <li>Our test photos partly come from public datasets and may not look like real claim photos.</li>
+          <li>One photo cannot show cause, wetness, depth or hidden damage. These are never reported as findings.</li>
+          <li>Thin cracks and faint stains are often missed by the detector, so they are flagged uncertain rather than confirmed.</li>
+          <li>Confidence scores are only meaningful once calibrated on labelled photos. Each result says whether that has happened.</li>
+          <li>This is evidence extraction, not a coverage decision. A person reviews every claim.</li>
+        </ul>
+      </div>
+    </div>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="assets/app.js?v=5"></script>
+  <script src="assets/app.js?v=7"></script>
 </body>
 </html>

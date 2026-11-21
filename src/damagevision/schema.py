@@ -191,6 +191,7 @@ class RunMeta(BaseModel):
     device: Optional[str] = None
     tokens: Optional[int] = None
     est_cost_usd: Optional[float] = None
+    calibrated: bool = Field(default=False, description="confidence from a model fitted on gold labels")
     errors: list[str] = Field(default_factory=list)
 
 
