@@ -42,7 +42,7 @@ def main():
         if a.no_guided:
             kwargs["guided"] = False
     elif a.backend == "hf":
-        kwargs = {"model": a.model, "load_4bit": a.load_4bit}
+        kwargs = {"model": a.model, "load_4bit": a.load_4bit or None}
     backend = get_backend(a.backend, **kwargs)
     pipe = Pipeline(backend, PipelineConfig(runs=a.runs, temperature=a.temperature, verify=not a.no_verify,
                                             cost_per_hour_usd=a.cost_per_hour))

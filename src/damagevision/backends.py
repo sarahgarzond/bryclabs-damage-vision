@@ -128,11 +128,13 @@ class HFBackend(Backend):
 
     name = "hf"
 
-    def __init__(self, model: str | None = None, load_4bit: bool = False, max_new_tokens: int = 1536):
+    def __init__(self, model: str | None = None, load_4bit: bool | None = None, max_new_tokens: int = 1536):
         import torch
         from transformers import AutoModelForImageTextToText, AutoProcessor
 
         self.model = model or os.getenv("DV_MODEL", "Qwen/Qwen2.5-VL-7B-Instruct")
+        if load_4bit is None:
+            load_4bit = os.getenv("DV_LOAD_4BIT", "0") == "1"
         kwargs = {"torch_dtype": "auto", "device_map": "auto"}
         if load_4bit:
             from transformers import BitsAndBytesConfig
