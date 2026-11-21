@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -34,4 +35,33 @@ jobs:
         with:
           path: site
       - id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const repo = context.repo;
+            const endpoint = 'POST /repos/{owner}/{repo}/pages/deployments';
+            const artifacts = await github.paginate(
+              github.rest.actions.listWorkflowRunArtifacts,
+              {...repo, run_id: context.runId}
+            );
+            const artifact = artifacts.find(item => item.name === 'github-pages' && !item.expired);
+            if (!artifact) throw new Error('Pages artifact is missing from the run');
+            const {data: deployment} = await github.request(endpoint, {
+              ...repo,
+              artifact_id: artifact.id,
+              pages_build_version: context.sha,
+              oidc_token: await core.getIDToken()
+            });
+            core.setOutput('page_url', deployment.page_url);
+            for (let attempt = 0; attempt < 36; attempt++) {
+              const {data} = await github.request(
+                'GET /repos/{owner}/{repo}/pages/deployments/{deployment_id}',
+                {...repo, deployment_id: deployment.id}
+              );
+              if (data.status === 'succeed') return;
+              if (!['queued', 'deployment_in_progress', 'pending', 'building'].includes(data.status)) {
+                throw new Error('Pages deployment status: ' + data.status);
+              }
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+            throw new Error('Timed out waiting for the Pages deployment');
