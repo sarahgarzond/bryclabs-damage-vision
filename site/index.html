@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Damage Evidence Extractor</title>
-  <meta name="description" content="From a property damage photo to verified, structured evidence for insurance claims.">
+  <meta name="description" content="Upload a property damage photo and get verified, structured evidence as JSON and CSV.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M9 17l5 5 9-11' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,202 +12,57 @@
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <header class="nav">
-    <div class="wrap nav-inner">
-      <a class="brand" href="#top" aria-label="Home">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8"/><path d="M9 17l5 5 9-11"/></svg>
-        </span>
-        <span>Damage Evidence</span>
-      </a>
-      <nav class="nav-links" aria-label="Sections">
-        <a href="#analyse">Analyse</a>
-        <a href="#results">Results</a>
-        <a href="#how">How it works</a>
-      </nav>
-      <button class="status-pill" id="statusPill" type="button" aria-haspopup="dialog">
-        <span class="dot" aria-hidden="true"></span><span id="statusText">Demo mode</span>
-      </button>
-    </div>
+  <header class="top">
+    <span class="brand"><span class="mark" aria-hidden="true"></span>Damage Evidence</span>
+    <button class="status" id="statusPill" type="button" aria-haspopup="dialog">
+      <span class="dot" aria-hidden="true"></span><span id="statusText">Demo mode</span>
+    </button>
   </header>
 
-  <main id="top">
-    <!-- HERO -->
-    <section class="hero">
-      <div class="wrap hero-inner">
-        <p class="eyebrow">BrycLabs challenge · Campus Founders Hackathon 2026</p>
-        <h1>From damage photo<br>to <span class="accent">verified evidence</span>.</h1>
-        <p class="lead">Upload a photo of property damage. We extract what is visible, check every finding with a second model,
-          say how sure we are, and list what an adjuster still needs. We never decide coverage.</p>
-        <div class="hero-cta">
-          <a class="btn btn-primary btn-lg" href="#analyse">Analyse a photo</a>
-          <button class="btn btn-ghost btn-lg" id="heroExample" type="button">See an example</button>
-        </div>
-        <ul class="hero-points">
-          <li><span class="ico">{ }</span><div><b>Schema-validated JSON</b><small>Fixed vocabulary, no free-form guessing</small></div></li>
-          <li><span class="ico">✓</span><div><b>Verified findings</b><small>Repeated runs + an independent detector</small></div></li>
-          <li><span class="ico">%</span><div><b>Honest confidence</b><small>Checked against hand-labelled photos</small></div></li>
-        </ul>
+  <main class="page">
+    <p class="intro">Upload a damage photo. Get verified evidence as JSON or CSV. We never decide coverage.</p>
+
+    <label class="drop" id="drop" for="fileInput" tabindex="0">
+      <input type="file" id="fileInput" accept="image/*" hidden>
+      <div class="drop-empty" id="dropEmpty">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 32V12m0 0l-8 8m8-8l8 8"/><path d="M8 32v5a4 4 0 004 4h24a4 4 0 004-4v-5"/></svg>
+        <strong>Drop a photo here</strong>
+        <span>or click to choose · paste works too</span>
       </div>
-    </section>
-
-    <!-- ANALYSE -->
-    <section class="section" id="analyse">
-      <div class="wrap">
-        <div class="section-head">
-          <h2>Analyse</h2>
-          <p>Drop a photo, or try one of the examples below.</p>
-        </div>
-
-        <div class="analyse-grid">
-          <!-- input -->
-          <div class="card input-card">
-            <label class="dropzone" id="dropzone" for="fileInput" tabindex="0">
-              <input type="file" id="fileInput" accept="image/*" hidden>
-              <div class="dz-empty" id="dzEmpty">
-                <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 31V13m0 0l-7 7m7-7l7 7" /><path d="M10 31v4a4 4 0 004 4h20a4 4 0 004-4v-4"/></svg>
-                <b>Drop a damage photo here</b>
-                <span>or click to choose · you can also paste</span>
-              </div>
-              <img id="dzPreview" alt="Selected photo" hidden>
-            </label>
-            <label class="field">
-              <span>Claimant description <em>(optional)</em></span>
-              <textarea id="claimText" rows="3" placeholder="e.g. Water came through the ceiling after a pipe burst upstairs."></textarea>
-              <small>Not shown to the model. Only used to check whether the photo supports the reported event.</small>
-            </label>
-            <button class="btn btn-primary btn-block" id="analyseBtn" type="button" disabled>Analyse photo</button>
-            <p class="hint" id="analyseHint"></p>
-
-            <div class="examples">
-              <p class="examples-title">Try an example</p>
-              <div class="example-grid" id="exampleGrid"></div>
-            </div>
-          </div>
-
-          <!-- output -->
-          <div class="card output-card" id="output">
-            <div class="placeholder" id="placeholder">
-              <div class="ph-art" aria-hidden="true">
-                <div class="ph-box b1"></div><div class="ph-box b2"></div>
-              </div>
-              <h3>Your results appear here</h3>
-              <p>Findings are drawn on the photo, each with its status, confidence and whether a second model confirmed it.</p>
-            </div>
-
-            <div class="loading" id="loading" hidden>
-              <div class="spinner" aria-hidden="true"></div>
-              <ol class="steps" id="steps">
-                <li>Reading the photo</li>
-                <li>Running the vision model several times</li>
-                <li>Cross-checking runs</li>
-                <li>Verifying with the detector</li>
-              </ol>
-            </div>
-
-            <div class="result" id="result" hidden>
-              <div class="banner" id="banner" hidden></div>
-              <div class="figure" id="figure">
-                <div class="stage">
-                  <img id="resultImg" alt="Analysed photo">
-                  <div class="boxes" id="boxes"></div>
-                </div>
-              </div>
-              <div class="badges" id="badges"></div>
-
-              <div class="tabs" role="tablist">
-                <button role="tab" class="tab active" data-tab="evidence" aria-selected="true">Evidence</button>
-                <button role="tab" class="tab" data-tab="readiness" aria-selected="false">Claim readiness</button>
-                <button role="tab" class="tab" data-tab="json" aria-selected="false">JSON</button>
-              </div>
-              <div class="tabpanel" data-panel="evidence" id="findings"></div>
-              <div class="tabpanel" data-panel="readiness" id="readiness" hidden></div>
-              <div class="tabpanel" data-panel="json" hidden>
-                <div class="json-actions">
-                  <button class="btn btn-ghost btn-sm" id="copyJson" type="button">Copy</button>
-                  <button class="btn btn-ghost btn-sm" id="downloadJson" type="button">Download</button>
-                </div>
-                <pre class="json" id="json"></pre>
-              </div>
-              <p class="meta" id="meta"></p>
-            </div>
-          </div>
-        </div>
+      <div class="stage" id="stage" hidden>
+        <img id="photo" alt="Uploaded photo">
+        <div class="boxes" id="boxes"></div>
+        <div class="busy" id="busy" hidden><div class="spinner"></div><span id="busyText">Analysing…</span></div>
       </div>
-    </section>
+    </label>
 
-    <!-- RESULTS -->
-    <section class="section alt" id="results">
-      <div class="wrap">
-        <div class="section-head">
-          <h2>Evaluation results</h2>
-          <p id="resultsLead">Measured on hand-labelled photos. No reference labels were supplied, so we built our own test set.</p>
-        </div>
-        <div id="metrics"></div>
+    <p class="examples" id="examples"></p>
+
+    <section class="out" id="out" hidden>
+      <div class="notice" id="notice" hidden></div>
+      <div class="actions">
+        <button class="btn primary" id="csvBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg>Download CSV
+        </button>
+        <button class="btn" id="jsonBtn" type="button">Download JSON</button>
+        <button class="btn" id="copyBtn" type="button">Copy JSON</button>
+        <span class="meta" id="meta"></span>
       </div>
-    </section>
-
-    <!-- HOW -->
-    <section class="section" id="how">
-      <div class="wrap">
-        <div class="section-head">
-          <h2>How it works</h2>
-          <p>Every finding has to survive two independent checks before we call it established.</p>
-        </div>
-        <ol class="pipeline">
-          <li><span class="num">1</span><h4>Extract</h4><p>A vision-language model (Qwen-VL) reads the photo and must answer in our JSON schema with a fixed vocabulary.</p></li>
-          <li><span class="num">2</span><h4>Repeat</h4><p>It runs several times on slightly varied copies. A finding seen in every run gets high agreement.</p></li>
-          <li><span class="num">3</span><h4>Verify</h4><p>An independent detector (OWLv2) looks for each finding at its claimed position.</p></li>
-          <li><span class="num">4</span><h4>Score</h4><p>Unsupported findings are dropped, unconfirmed ones flagged uncertain. Confidence is calibrated on our labels.</p></li>
-          <li><span class="num">5</span><h4>Summarise</h4><p>Claim readiness: what is established, what is only indicated, and which photos to request next.</p></li>
-        </ol>
-
-        <div class="two-col">
-          <div class="card plain">
-            <h3>Status and confidence are separate</h3>
-            <ul class="legend">
-              <li><span class="sw visible"></span><b>Visible</b> directly seen in the photo</li>
-              <li><span class="sw inferred"></span><b>Inferred</b> strongly suggested by visible cues</li>
-              <li><span class="sw na"></span><b>Not assessable</b> relevant, but the photo cannot show it</li>
-              <li><span class="sw uncertain"></span><b>Uncertain</b> low agreement or not confirmed by the detector</li>
-            </ul>
-          </div>
-          <div class="card plain">
-            <h3>What a single photo cannot tell</h3>
-            <ul class="bullets">
-              <li>The cause of damage, only visible indicators of it</li>
-              <li>Whether a stain is still wet, or how deep a crack goes</li>
-              <li>Anything outside the frame or behind surfaces</li>
-              <li>Whether the claim is covered: that is the policy check and human review</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+      <pre class="json" id="json"></pre>
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="wrap footer-inner">
-      <span>Damage Evidence Extractor · built in 48 hours for the BrycLabs challenge</span>
-      <a href="https://github.com/sarahgarzond/bryclabs-damage-vision">Source code</a>
-    </div>
-  </footer>
-
-  <!-- CONNECT DIALOG -->
   <dialog id="connectDialog" class="dialog">
-    <form method="dialog" class="dialog-body" id="connectForm">
+    <form method="dialog" class="dialog-body">
       <h3>Connect the model</h3>
-      <p>Paste the https address of the running API (<code>app/api.py</code>). Without it, the site shows the bundled examples only.</p>
-      <label class="field">
-        <span>API address</span>
-        <input type="url" id="apiInput" placeholder="https://your-tunnel.trycloudflare.com" autocomplete="off">
-      </label>
-      <p class="test-result" id="testResult"></p>
+      <p>Paste the https address of the running API. Without it, only the examples work.</p>
+      <input type="url" id="apiInput" placeholder="https://your-tunnel.trycloudflare.com" autocomplete="off">
+      <p class="test" id="testResult"></p>
       <div class="dialog-actions">
-        <button class="btn btn-ghost" type="button" id="disconnectBtn">Use demo mode</button>
+        <button class="btn" type="button" id="disconnectBtn">Demo mode</button>
         <span class="spacer"></span>
-        <button class="btn btn-ghost" type="button" id="testBtn">Test</button>
-        <button class="btn btn-primary" type="button" id="saveBtn">Save</button>
+        <button class="btn" type="button" id="testBtn">Test</button>
+        <button class="btn primary" type="button" id="saveBtn">Save</button>
       </div>
     </form>
   </dialog>
