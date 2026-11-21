@@ -9,11 +9,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=9">
+  <link rel="stylesheet" href="assets/style.css?v=10">
 </head>
 <body>
   <header class="top">
-    <span class="brand">Damage Evidence</span>
+    <span class="brand">BRYCLABS / DAMAGE VISION</span>
     <div class="top-actions">
     <a class="btn" href="cto.html">CTO walkthrough</a>
     <button class="info-dot" id="infoBtn" type="button" aria-haspopup="dialog" aria-label="How reliable is this?" title="How reliable is this?">
@@ -27,12 +27,14 @@
   </header>
 
   <main class="page">
+    <h1>Damage Evidence Extractor</h1>
+    <p>Upload a property damage photo or explore an example to review structured findings and their evidence.</p>
 
     <label class="drop" id="drop" for="fileInput" tabindex="0">
       <input type="file" id="fileInput" accept="image/*" hidden>
       <div class="drop-empty" id="dropEmpty">
         <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 32V12m0 0l-8 8m8-8l8 8"/><path d="M8 32v5a4 4 0 004 4h24a4 4 0 004-4v-5"/></svg>
-        <strong>Drop a damage photo to analyse</strong>
+        <strong>Add, drop or paste your image</strong>
         <span class="pick">Choose photo</span>
         <span>JPG, PNG or HEIC · paste works too</span>
       </div>
@@ -42,6 +44,38 @@
         <div class="busy" id="busy" hidden><div class="spinner"></div><span id="busyText">Analysing…</span></div>
       </div>
     </label>
+
+    <details class="glass-example">
+      <summary class="btn">Try an example</summary>
+      <h2>Glass railing</h2>
+      <p>Manually annotated example of a fractured stair railing panel.</p>
+      <img src="examples/glass-railing.jpg" alt="Glass staircase railing with a fractured central panel" width="2048" height="1536" loading="lazy">
+      <h3>Example JSON</h3>
+      <pre class="json" tabindex="0">{
+  &quot;image_id&quot;: &quot;staircase_glass_01&quot;,
+  &quot;features&quot;: [
+    {
+      &quot;name&quot;: &quot;glass_fracture&quot;,
+      &quot;value&quot;: &quot;Widespread fracture in the central glass panel&quot;,
+      &quot;component&quot;: &quot;Staircase balustrade&quot;,
+      &quot;material&quot;: &quot;Glass&quot;,
+      &quot;status&quot;: &quot;visible&quot;,
+      &quot;uncertain&quot;: false,
+      &quot;evidence&quot;: &quot;Dense network of small, irregular fragments across the sloped panel beneath the metal handrail.&quot;,
+      &quot;box&quot;: [
+        290,
+        40,
+        715,
+        960
+      ]
+    }
+  ],
+  &quot;limitations&quot;: [
+    &quot;The cause and exact glass type cannot be established from the photo.&quot;,
+    &quot;The panel’s remaining load-bearing capacity cannot be assessed from the photo.&quot;
+  ]
+}</pre>
+    </details>
 
     <p class="upload-status" id="uploadStatus" role="status" hidden></p>
     <section class="out" id="out" hidden>

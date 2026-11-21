@@ -185,3 +185,6 @@ img { display: block; max-width: 100%; }
 .extra-exports summary { cursor: pointer; color: var(--muted); margin-bottom: 8px; }
 
 .upload-status { color: var(--muted); margin: 14px 0; }
+
+.glass-example { margin-block: 1rem; }
+.glass-example > img { display: block; width: 100%; height: auto; border-radius: 12px; }
