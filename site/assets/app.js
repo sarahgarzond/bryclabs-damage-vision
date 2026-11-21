@@ -46,6 +46,7 @@
 
   /* ---------- upload ---------- */
   const drop = $("#drop");
+  let selection = 0;
   $("#fileInput").onchange = (e) => handleFile(e.target.files[0]);
   ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("drag"); }));
   ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("drag"); }));
@@ -53,9 +54,11 @@
   drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#fileInput").click(); } });
   window.addEventListener("paste", (e) => { const it = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/")); if (it) handleFile(it.getAsFile()); });
 
-  function showPhoto(src) {
+  function showPhoto(src, description) {
     $("#dropEmpty").hidden = true; $("#stage").hidden = false; drop.classList.add("has-photo");
-    $("#boxes").innerHTML = ""; $("#photo").src = src;
+    $("#boxes").innerHTML = "";
+    $("#photo").alt = description;
+    $("#photo").src = src;
   }
 
   async function downscale(file, maxSide = 1600) {
@@ -70,8 +73,11 @@
 
   async function handleFile(file) {
     if (!file || !file.type.startsWith("image/")) return toast("Please choose an image");
+    const current = ++selection;
     const upload = await downscale(file);
-    showPhoto(URL.createObjectURL(upload));
+    if (current !== selection) return;
+    showPhoto(URL.createObjectURL(upload), "Uploaded damage photo");
+    $("#busy").hidden = true;
     $("#out").hidden = true;
     if (!state.health) {
       toast("Connect the model first, or try an example");
@@ -81,14 +87,15 @@
     const busy = $("#busy"); busy.hidden = false;
     const msgs = ["Analysing…", "Cross-checking runs…", "Verifying findings…"]; let k = 0;
     $("#busyText").textContent = msgs[0];
-    const timer = setInterval(() => { k = Math.min(k + 1, msgs.length - 1); $("#busyText").textContent = msgs[k]; }, 3000);
+    const timer = setInterval(() => { if (current !== selection) return; k = Math.min(k + 1, msgs.length - 1); $("#busyText").textContent = msgs[k]; }, 3000);
     try {
       const fd = new FormData(); fd.append("image", upload, upload.name || "upload.jpg");
       const r = await fetch(state.api + "/analyze", { method: "POST", body: fd });
       if (!r.ok) throw new Error(await r.json().then((j) => j.detail).catch(() => "HTTP " + r.status));
-      render(await r.json(), "live");
-    } catch (e) { toast("Analysis failed: " + e.message); }
-    finally { clearInterval(timer); busy.hidden = true; }
+      const result = await r.json();
+      if (current === selection) render(result, "live");
+    } catch (e) { if (current === selection) toast("Analysis failed: " + e.message); }
+    finally { clearInterval(timer); if (current === selection) busy.hidden = true; }
   }
 
   /* ---------- examples ---------- */
@@ -98,11 +105,20 @@
     if (!state.examples.length) return;
     el.innerHTML = "Try an example: " + state.examples.map((ex, i) => `<button type="button" data-i="${i}">${esc(ex.title)}</button>`).join(" · ");
     el.querySelectorAll("button").forEach((b) => (b.onclick = () => openExample(+b.dataset.i)));
+    if (selection === 0) await openExample(0);
   }
   async function openExample(i) {
     const ex = state.examples[i];
-    try { const res = await (await fetch(ex.result)).json(); showPhoto(ex.image); render(res, ex.illustrative ? "illustrative" : "example"); }
-    catch { toast("Could not load the example"); }
+    const current = ++selection;
+    $("#busy").hidden = true;
+    try {
+      const response = await fetch(ex.result);
+      if (!response.ok) throw new Error("Example unavailable");
+      const result = await response.json();
+      if (current !== selection) return;
+      showPhoto(ex.image, ex.title);
+      render(result, ex.illustrative ? "illustrative" : "example");
+    } catch { if (current === selection) toast("Could not load the example"); }
   }
 
   /* ---------- render ---------- */
@@ -125,7 +141,6 @@
     renderCaveats(res, source);
     $("#json").innerHTML = highlight(JSON.stringify(res, null, 2));
     $("#out").hidden = false;
-    $("#out").scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
   function drawBoxes(res, img) {

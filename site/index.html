@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=7">
+  <link rel="stylesheet" href="assets/style.css?v=8">
 </head>
 <body>
   <header class="top">
@@ -28,6 +28,11 @@
 
   <main class="page">
 
+    <div class="photo-controls">
+      <label class="btn" for="fileInput">Choose photo</label>
+      <p class="examples" id="examples"></p>
+    </div>
+
     <label class="drop" id="drop" for="fileInput" tabindex="0">
       <input type="file" id="fileInput" accept="image/*" hidden>
       <div class="drop-empty" id="dropEmpty">
@@ -43,16 +48,11 @@
       </div>
     </label>
 
-    <p class="examples" id="examples"></p>
-
     <section class="out" id="out" hidden>
       <div class="notice" id="notice" hidden></div>
       <div class="actions">
-        <button class="btn primary" id="csvBtn" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg>Download CSV
-        </button>
-        <button class="btn" id="jsonBtn" type="button">Download JSON</button>
-        <button class="btn" id="copyBtn" type="button">Copy JSON</button>
+        <h2 class="result-title" id="resultTitle">JSON</h2>
+        <button class="btn primary" id="jsonBtn" type="button">Download JSON</button>
         <div class="caveat-wrap">
           <button class="caveat-chip" id="caveatBtn" type="button" aria-expanded="false" aria-controls="caveatPop"></button>
           <div class="caveat-pop" id="caveatPop" role="dialog" aria-label="Caveats for this result" hidden>
@@ -62,7 +62,12 @@
         </div>
         <span class="meta" id="meta"></span>
       </div>
-      <pre class="json" id="json"></pre>
+      <pre class="json" id="json" tabindex="0" aria-labelledby="resultTitle"></pre>
+      <details class="extra-exports">
+        <summary>More export options</summary>
+        <button class="btn" id="csvBtn" type="button">Download CSV</button>
+        <button class="btn" id="copyBtn" type="button">Copy JSON</button>
+      </details>
     </section>
   </main>
 
@@ -103,6 +108,6 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="assets/app.js?v=7"></script>
+  <script src="assets/app.js?v=8"></script>
 </body>
 </html>
