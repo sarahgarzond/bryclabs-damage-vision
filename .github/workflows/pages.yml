@@ -59,7 +59,7 @@ jobs:
                 {...repo, deployment_id: deployment.id}
               );
               if (data.status === 'succeed') return;
-              if (!['queued', 'deployment_in_progress', 'pending', 'building'].includes(data.status)) {
+              if (['deployment_failed', 'failed', 'cancelled', 'error'].includes(data.status)) {
                 throw new Error('Pages deployment status: ' + data.status);
               }
               await new Promise(resolve => setTimeout(resolve, 5000));
