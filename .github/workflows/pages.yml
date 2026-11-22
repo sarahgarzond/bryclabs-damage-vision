@@ -40,11 +40,15 @@ jobs:
           script: |
             const repo = context.repo;
             const endpoint = 'POST /repos/{owner}/{repo}/pages/deployments';
-            const artifacts = await github.paginate(
-              github.rest.actions.listWorkflowRunArtifacts,
-              {...repo, run_id: context.runId}
-            );
-            const artifact = artifacts.find(item => item.name === 'github-pages' && !item.expired);
+            let artifact;
+            for (let attempt = 0; attempt < 8 && !artifact; attempt++) {
+              const artifacts = await github.paginate(
+                github.rest.actions.listWorkflowRunArtifacts,
+                {...repo, run_id: context.runId}
+              );
+              artifact = artifacts.find(item => item.name === 'github-pages' && !item.expired);
+              if (!artifact) await new Promise(resolve => setTimeout(resolve, 5000));
+            }
             if (!artifact) throw new Error('Pages artifact is missing from the run');
             const {data: deployment} = await github.request(endpoint, {
               ...repo,
