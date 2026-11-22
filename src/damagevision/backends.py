@@ -79,8 +79,10 @@ class Backend:
             try:
                 gen = self.generate(img, temperature=temperature if attempt == 0 else max(temperature, 0.3),
                                     seed=None if seed is None else seed + attempt)
-            except Exception as e:  # network, OOM, server down
-                last = Generation(raw="", output=None, error=f"{type(e).__name__}: {e}")
+            except Exception as e:  # network, OOM, server down, bad request
+                body = getattr(e, "body", None)
+                detail = f" {json.dumps(body)[:300]}" if body and str(body) not in str(e) else ""
+                last = Generation(raw="", output=None, error=f"{type(e).__name__}: {e}{detail}"[:500])
                 continue
             if gen.output is not None:
                 return gen
@@ -95,7 +97,8 @@ class OpenAICompatBackend(Backend):
 
     def __init__(self, model: str | None = None, base_url: str | None = None, api_key: str | None = None,
                  guided: bool = True, max_tokens: int = 2048, name: str | None = None, strict: bool = False,
-                 send_temperature: bool = True, token_param: str = "max_tokens", timeout: float = 55.0):
+                 send_temperature: bool = True, token_param: str = "max_tokens", timeout: float = 55.0,
+                 send_seed: bool = True):
         from openai import OpenAI
 
         self.model = model or os.getenv("DV_MODEL", "Qwen/Qwen2.5-VL-7B-Instruct")
@@ -108,32 +111,54 @@ class OpenAICompatBackend(Backend):
         self.max_tokens = max_tokens
         self.send_temperature = send_temperature   # OpenAI reasoning models reject temperature != default
         self.token_param = token_param             # OpenAI: "max_completion_tokens"
+        self.send_seed = send_seed
+        # Output-format modes, tried in order; the first one the provider accepts is remembered.
+        self.modes = ["schema", "json_object", "plain"] if guided else ["plain"]
 
-    def generate(self, img, temperature=0.0, seed=None):
+    def _format(self, mode: str) -> dict:
         from .schema import strict_schema
 
-        kwargs = {self.token_param: self.max_tokens}
-        if self.guided:
+        if mode == "schema":
             schema = strict_schema(ModelOutput) if self.strict else model_output_schema()
-            kwargs["response_format"] = {
-                "type": "json_schema",
-                "json_schema": {"name": "damage_extraction", "schema": schema, **({"strict": True} if self.strict else {})},
-            }
+            return {"response_format": {"type": "json_schema", "json_schema": {
+                "name": "damage_extraction", "schema": schema, **({"strict": True} if self.strict else {})}}}
+        if mode == "json_object":
+            return {"response_format": {"type": "json_object"}}
+        return {}
+
+    def generate(self, img, temperature=0.0, seed=None):
+        from openai import BadRequestError
+
+        kwargs = {self.token_param: self.max_tokens}
         if self.send_temperature:
             kwargs["temperature"] = temperature
-        if seed is not None and self.send_temperature:
+        if seed is not None and self.send_seed and self.send_temperature:
             kwargs["seed"] = seed
-        resp = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": [
-                    {"type": "image_url", "image_url": {"url": _to_data_url(img)}},
-                    {"type": "text", "text": user_prompt()},
-                ]},
-            ],
-            **kwargs,
-        )
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT + ("" if self.modes[0] == "schema" else
+                     "\nReturn one JSON object with exactly these keys: damage_present, image_quality, quality_issues, "
+                     "scene, findings, limitations. Each finding has damage_type, component, material, location, "
+                     "visible_traits, extent, age_indicators, status, uncertain, bbox_1000, notes.")},
+            {"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": _to_data_url(img)}},
+                {"type": "text", "text": user_prompt()},
+            ]},
+        ]
+        while True:
+            mode = self.modes[0]
+            try:
+                resp = self.client.chat.completions.create(model=self.model, messages=messages,
+                                                           **kwargs, **self._format(mode))
+                break
+            except BadRequestError:
+                # Provider rejected this output format (schema features, json mode): try the next one.
+                if len(self.modes) == 1:
+                    raise
+                self.modes.pop(0)
+                messages[0]["content"] = SYSTEM_PROMPT + (
+                    "\nReturn one JSON object with exactly these keys: damage_present, image_quality, quality_issues, "
+                    "scene, findings, limitations. Each finding has damage_type, component, material, location, "
+                    "visible_traits, extent, age_indicators, status, uncertain, bbox_1000, notes.")
         text = resp.choices[0].message.content or ""
         tokens = getattr(resp.usage, "total_tokens", None) if resp.usage else None
         return Generation(raw=text, output=parse_json(text), tokens=tokens)

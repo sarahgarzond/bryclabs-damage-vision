@@ -86,3 +86,27 @@ def test_claude_refusal_is_reported(img, monkeypatch):
     b = ClaudeBackend()
     b.caller.client = SimpleNamespace(messages=Msgs(), beta=SimpleNamespace(messages=Msgs()))
     assert "refused" in b.generate(img).error
+
+
+def test_openai_compat_falls_back_when_schema_rejected(img):
+    import httpx
+    from openai import BadRequestError
+    from damagevision.backends import OpenAICompatBackend
+    seen = []
+    good = json.dumps(out("crack"))
+
+    class Completions:
+        def create(self, **kw):
+            fmt = kw.get("response_format", {}).get("type")
+            seen.append(fmt)
+            if fmt == "json_schema":
+                req = httpx.Request("POST", "https://x")
+                raise BadRequestError("bad schema", response=httpx.Response(400, request=req), body=[{"error": "schema"}])
+            return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=good))], usage=None)
+
+    b = OpenAICompatBackend(name="gemini", model="g", base_url="https://x", api_key="k", send_seed=False)
+    b.client = SimpleNamespace(chat=SimpleNamespace(completions=Completions()))
+    g = b.generate_validated(img, seed=0)
+    assert g.output.findings[0].damage_type.value == "crack" and seen == ["json_schema", "json_object"]
+    b.generate_validated(img)
+    assert seen[-1] == "json_object"          # remembered, no retry with the rejected schema

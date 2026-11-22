@@ -43,7 +43,7 @@ def build_agents(enabled: Optional[str] = None) -> list[Backend]:
         agents.append(OpenAICompatBackend(
             name="gemini", model=os.getenv("DV_GEMINI_MODEL", "gemini-2.5-pro"),
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-            api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"), max_tokens=8000))
+            api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"), max_tokens=8000, send_seed=False))
     if "vllm" in wanted and os.getenv("DV_BASE_URL"):
         agents.append(OpenAICompatBackend(name="qwen-vllm"))
     return agents
@@ -97,7 +97,7 @@ class Orchestrator:
                  "seconds": round(time.perf_counter() - t, 2), "tokens": gen.tokens,
                  "findings": len(gen.output.findings) if gen.output else None}
         if gen.output is None:
-            trace["error"] = (gen.error or "no output")[:200]
+            trace["error"] = (gen.error or "no output")[:400]
         return gen, trace
 
     def run(self, img: Image.Image, image_id: str) -> ImageResult:
