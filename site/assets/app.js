@@ -121,6 +121,7 @@
 
     const m = res.meta || {};
     renderCaveats(res, source);
+    recordRun(res, source);
     const need = res.missing_information || [];
     $("#needed").hidden = !need.length;
     $("#neededList").innerHTML = need.map((x) => `<li>${esc(x)}</li>`).join("");
@@ -288,6 +289,75 @@
       $("#creditsBox").hidden = false;
     }
   }
+
+  /* ---------- judging scorecard: real session telemetry + criterion evidence ---------- */
+  const runs = [];
+  function recordRun(res, source) {
+    if (source !== "live" || res.meta?.backend === "mock") return;
+    const fs = res.findings || [], ag = res.meta?.agents || [];
+    runs.push({
+      ok: res.status !== "error", secs: Number(res.meta?.runtime_s) || null, findings: fs.length,
+      agreement: fs.length ? fs.reduce((a, f) => a + (f.agreement ?? 0), 0) / fs.length : null,
+      uncertain: fs.length ? fs.filter((f) => f.uncertain).length / fs.length : null,
+      dropped: (res.dropped_findings || []).length, missing: (res.missing_information || []).length,
+      agents: ag.filter((a) => a.role !== "judge").length, agentsOk: ag.filter((a) => a.role !== "judge" && a.ok).length,
+      tokens: Number(res.meta?.tokens) || 0,
+    });
+    $("#scFabSub").textContent = `${runs.length} live ${runs.length === 1 ? "analysis" : "analyses"} · telemetry on`;
+    if ($("#scDialog").open) renderScorecard();
+  }
+  const mean = (xs) => { xs = xs.filter((x) => x != null && !Number.isNaN(x)); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
+  const pctl = (xs, q) => { xs = xs.filter((x) => x != null).sort((a, b) => a - b); return xs.length ? xs[Math.min(xs.length - 1, Math.floor(q * xs.length))] : null; };
+  const spark = (xs) => { const v = xs.filter((x) => x != null).slice(-24); const mx = Math.max(...v, 1e-9);
+    return v.length ? `<div class="sc-spark">${v.map((x) => `<i style="height:${Math.max(8, (x / mx) * 100)}%"></i>`).join("")}</div>` : ""; };
+  const fmt = (v, d = 1, suf = "") => (v == null ? "–" : (+v).toFixed(d) + suf);
+  const pc = (v) => (v == null ? "–" : Math.round(v * 100) + "%");
+
+  function renderScorecard() {
+    const n = runs.length, ok = runs.filter((r) => r.ok);
+    $("#scN").textContent = `${n} ${n === 1 ? "analysis" : "analyses"}`;
+    const tile = (val, label, extra = "") => `<div class="sc-tile ${val === "–" ? "dim" : ""}"><b>${val}</b><span>${label}</span>${extra}</div>`;
+    const secs = runs.map((r) => r.secs);
+    $("#scLive").innerHTML = [
+      tile(fmt(mean(secs), 1, " s"), "mean runtime per image", spark(secs)),
+      tile(fmt(pctl(secs, 0.95), 1, " s"), "p95 runtime"),
+      tile(pc(n ? ok.length / n : null), "runs without error"),
+      tile(pc(mean(runs.map((r) => (r.agents ? r.agentsOk / r.agents : null)))), "agent availability"),
+      tile(pc(mean(ok.map((r) => r.agreement))), "mean cross-model agreement", spark(ok.map((r) => r.agreement))),
+      tile(pc(mean(ok.map((r) => r.uncertain))), "findings flagged uncertain"),
+      tile(fmt(mean(ok.map((r) => r.findings)), 2), "findings per image"),
+      tile(String(runs.reduce((a, r) => a + r.dropped, 0)), "claims rejected as unsupported"),
+    ].join("");
+
+    const m = state.metrics, k = state.agreement?.kappa_damage_type_presence, rob = state.robustness;
+    const mt = (label, val) => `<span class="sc-m ${val === "pending" ? "pending" : ""}">${label} <b>${val}</b></span>`;
+    const crit = [
+      { w: 30, c: "#10b981", t: "Extraction quality", ask: "Relevant, accurate and complete features",
+        chips: ["3-model ensemble", "schema-forced JSON", "13 damage classes", "12 components · 12 materials", "boxes per finding", "long-term damage indicators", "missing-info requests"],
+        metrics: [mt("precision", m ? pc(m.findings?.precision) : "pending"), mt("recall", m ? pc(m.findings?.recall) : "pending"), mt("F1", m ? pc(m.findings?.f1) : "pending"), mt("box IoU", m?.boxes?.mean_iou != null ? m.boxes.mean_iou.toFixed(2) : "pending")] },
+      { w: 30, c: "#22d3ee", t: "Evaluation approach", ask: "Justified criteria, transparent tests and limits",
+        chips: ["100-image gold set design", "blind double labelling", "Cohen's κ", "1,000× bootstrap CIs", "multi-setup ablation", "per-group metrics", "failure candidates"],
+        metrics: [mt("κ labellers", k != null ? k.toFixed(2) : "pending"), mt("images scored", m ? String(m.images_evaluated) : "pending"), mt("setups compared", state.comparison?.setups?.length ? String(state.comparison.setups.length) : "pending")] },
+      { w: 20, c: "#a3e635", t: "Uncertainty & robustness", ask: "Ambiguous images and unsupported claims",
+        chips: ["status ≠ confidence", "cross-model agreement", "adversarial judge", "unsupported → dropped", "8 stress transforms", "clean-photo hallucination test", "logistic calibration"],
+        metrics: [mt("hallucination on clean photos", m ? pc(m.negatives?.hallucination_rate) : "pending"), mt("confidence AUROC", m?.confidence_auroc != null ? m.confidence_auroc.toFixed(2) : "pending"),
+          mt("live uncertain share", n ? pc(mean(ok.map((r) => r.uncertain))) : "pending")] },
+      { w: 10, c: "#fbbf24", t: "Reproducibility", ask: "Runnable setup, JSON schema and error handling",
+        chips: ["3 published JSON schemas", "20 automated tests", "one-command run", "errors as records, never crashes", "provider fallback modes", "lean runtime requirements"],
+        metrics: [mt("live error-free runs", n ? pc(ok.length / n) : "pending")] },
+      { w: 10, c: "#f472b6", t: "Efficiency", ask: "Runtime and resources per image with test conditions",
+        chips: ["parallel subagents", "runtime + tokens logged per image", "1280 px downscale", "serverless, no GPU idle cost"],
+        metrics: [mt("mean s / image", n ? fmt(mean(secs), 1, " s") : "pending"), mt("tokens / image", n && mean(runs.map((r) => r.tokens || null)) ? Math.round(mean(runs.map((r) => r.tokens || null))).toString() : "pending"),
+          mt("test-set s / image", m?.runtime_s_per_image?.mean != null ? m.runtime_s_per_image.mean.toFixed(1) + " s" : "pending")] },
+    ];
+    $("#scCriteria").innerHTML = crit.map((x) => `<div class="sc-crit"><div class="sc-donut" style="--w:${x.w};--c:${x.c}"><b>${x.w}%</b></div>
+      <div><h3>${x.t}</h3><p class="ask">${x.ask}</p><div class="sc-chips">${x.chips.map((c) => `<span>${esc(c)}</span>`).join("")}</div>
+      <div class="sc-metrics">${x.metrics.join("")}</div></div></div>`).join("");
+  }
+  const scDialog = $("#scDialog");
+  $("#scFab").onclick = () => { renderScorecard(); scDialog.showModal(); };
+  $("#scClose").onclick = () => scDialog.close();
+  scDialog.addEventListener("click", (e) => { if (e.target === scDialog) scDialog.close(); });
 
   let tt;
   function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 3000); }

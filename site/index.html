@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=14">
+  <link rel="stylesheet" href="assets/style.css?v=15">
 </head>
 <body>
   <header class="top">
@@ -163,7 +163,31 @@
     </div>
   </dialog>
 
+  <button class="sc-fab" id="scFab" type="button" aria-haspopup="dialog">
+    <span class="sc-rings" aria-hidden="true"><i style="--w:30"></i><i style="--w:30"></i><i style="--w:20"></i><i style="--w:10"></i><i style="--w:10"></i></span>
+    <span class="sc-fab-txt"><b>Judging scorecard</b><span id="scFabSub">5 criteria · live telemetry</span></span>
+  </button>
+
+  <dialog id="scDialog" class="sc" aria-label="Judging scorecard">
+    <div class="sc-body">
+      <button class="sc-close" id="scClose" type="button" aria-label="Close">×</button>
+      <p class="sc-kicker">// judging scorecard</p>
+      <h2>Every criterion, instrumented.</h2>
+      <div class="sc-weights" aria-label="Criterion weights">
+        <span style="--w:30" data-k="ex" title="Extraction quality">Extraction 30</span><span style="--w:30" data-k="ev">Evaluation 30</span><span style="--w:20" data-k="un" title="Uncertainty &amp; robustness">Uncertainty 20</span><span style="--w:10" data-k="re" title="Reproducibility">Repro 10</span><span style="--w:10" data-k="ef" title="Efficiency">Speed 10</span>
+      </div>
+
+      <section class="sc-live">
+        <p class="sc-h">Live session telemetry <em id="scN">0 analyses</em></p>
+        <div class="sc-grid" id="scLive"></div>
+        <p class="sc-note">Computed in your browser from every real analysis in this session. Nothing simulated.</p>
+      </section>
+
+      <div id="scCriteria"></div>
+    </div>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="assets/app.js?v=14"></script>
+  <script src="assets/app.js?v=15"></script>
 </body>
 </html>
