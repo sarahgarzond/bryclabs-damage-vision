@@ -1,16 +1,16 @@
 """Orchestrator: several vision models as parallel subagents, merged by cross-model agreement,
 then a judge agent that checks every finding against the photo.
 
-  photo ──► subagents in parallel (Claude, GPT, Gemini, optional Qwen-VL via vLLM)
+  photo ──► subagents in parallel (Gemini, GPT, optional Qwen-VL via vLLM)
                  each returns the same schema-constrained JSON
             ──► merge: cluster findings by type + box overlap, agreement = share of models that found it
-            ──► judge (Claude): supported / uncertain / unsupported per finding + missing information
+            ──► judge (Gemini or GPT): supported / uncertain / unsupported per finding + missing information
             ──► rules: unsupported and not agreed by most models -> dropped (kept for transparency)
                        uncertain, unsupported or low agreement     -> flagged uncertain
             ──► confidence, claim readiness, ImageResult
 
-Agents are enabled by which API keys exist (ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY,
-DV_BASE_URL for vLLM) and can be limited with DV_AGENTS="claude,openai,gemini,vllm".
+Agents are enabled by which API keys exist (GEMINI_API_KEY, OPENAI_API_KEY, DV_BASE_URL for vLLM)
+and can be limited with DV_AGENTS="openai,gemini,vllm".
 A failing agent never fails the request: it is recorded in meta.agents and the rest continue.
 """
 from __future__ import annotations
@@ -29,11 +29,8 @@ from .schema import DamagePresent, ImageResult, RunMeta
 
 
 def build_agents(enabled: Optional[str] = None) -> list[Backend]:
-    wanted = {a.strip() for a in (enabled or os.getenv("DV_AGENTS", "claude,openai,gemini,vllm")).split(",") if a.strip()}
+    wanted = {a.strip() for a in (enabled or os.getenv("DV_AGENTS", "openai,gemini,vllm")).split(",") if a.strip()}
     agents: list[Backend] = []
-    if "claude" in wanted and (os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN")):
-        from .claude_agents import ClaudeBackend
-        agents.append(ClaudeBackend())
     if "openai" in wanted and os.getenv("OPENAI_API_KEY"):
         agents.append(OpenAICompatBackend(
             name="openai", model=os.getenv("DV_OPENAI_MODEL", "gpt-5.1"), base_url="https://api.openai.com/v1",
@@ -56,9 +53,7 @@ def available() -> bool:
 def build_agents_cheap() -> list[str]:
     """Which agents would be enabled, without constructing clients."""
     out = []
-    wanted = os.getenv("DV_AGENTS", "claude,openai,gemini,vllm")
-    if "claude" in wanted and (os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN")):
-        out.append("claude")
+    wanted = os.getenv("DV_AGENTS", "openai,gemini,vllm")
     if "openai" in wanted and os.getenv("OPENAI_API_KEY"):
         out.append("openai")
     if "gemini" in wanted and (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")):
@@ -76,9 +71,10 @@ class Orchestrator:
         self.agents = agents if agents is not None else build_agents()
         if use_judge is None:
             use_judge = os.getenv("DV_JUDGE", "1") == "1"
-        if judge is None and use_judge and (os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN")):
-            from .claude_agents import ClaudeJudge
-            judge = ClaudeJudge()
+        if judge is None and use_judge:
+            from .judge import Judge, default_provider
+            if default_provider():
+                judge = Judge()
         self.judge = judge if use_judge else None
         self.calib = load_calibration(calibration_path)
         self.cost_per_mtok = None

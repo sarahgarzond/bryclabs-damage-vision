@@ -2,7 +2,7 @@ import json
 from types import SimpleNamespace
 
 from damagevision.backends import Backend, Generation, MockBackend
-from damagevision.claude_agents import ClaudeBackend, JudgeOutput, Verdict
+from damagevision.judge import Judge, JudgeOutput, Verdict
 from damagevision.orchestrator import Orchestrator
 from damagevision.readiness import assess
 from damagevision.schema import ModelOutput
@@ -57,35 +57,24 @@ def test_orchestrator_all_fail_returns_error(img):
     assert res.status == "error"
 
 
-def test_claude_backend_request_shape(img, monkeypatch):
+def test_judge_parses_and_reports(img, monkeypatch):
     sent = {}
-    data = out("crack")
+    reply = {"verdicts": [{"index": 1, "verdict": "supported", "reason": "visible"}],
+             "missing_information": ["Photo of the room above"], "additional_limitations": []}
 
-    class Msgs:
+    class Completions:
         def create(self, **kw):
             sent.update(kw)
-            return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=json.dumps(data))],
-                                   usage=SimpleNamespace(input_tokens=10, output_tokens=5))
+            return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=json.dumps(reply)))], usage=None)
 
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
-    b = ClaudeBackend()
-    b.caller.client = SimpleNamespace(messages=Msgs(), beta=SimpleNamespace(messages=Msgs()))
-    g = b.generate(img)
-    assert g.output.findings[0].damage_type.value == "crack" and g.tokens == 15
-    assert sent["model"] == "claude-opus-5-5" and sent["fallbacks"] == "default"
-    assert sent["output_config"]["format"]["type"] == "json_schema" and "temperature" not in sent
-    assert sent["messages"][0]["content"][0]["type"] == "image"
-
-
-def test_claude_refusal_is_reported(img, monkeypatch):
-    class Msgs:
-        def create(self, **kw):
-            return SimpleNamespace(stop_reason="refusal", stop_details=SimpleNamespace(category="cyber"), content=[],
-                                   usage=SimpleNamespace(input_tokens=1, output_tokens=0))
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
-    b = ClaudeBackend()
-    b.caller.client = SimpleNamespace(messages=Msgs(), beta=SimpleNamespace(messages=Msgs()))
-    assert "refused" in b.generate(img).error
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    j = Judge(client=SimpleNamespace(chat=SimpleNamespace(completions=Completions())))
+    from damagevision.consistency import merge_runs
+    merged = merge_runs([ModelOutput.model_validate(out("crack"))], 800, 600)
+    findings = merged.pop("findings")
+    res, trace = j.review(img, merged, findings)
+    assert trace["ok"] and res.verdicts[0].verdict == "supported" and res.missing_information == ["Photo of the room above"]
+    assert j.provider == "gemini" and sent["response_format"]["type"] == "json_schema"
 
 
 def test_openai_compat_falls_back_when_schema_rejected(img):

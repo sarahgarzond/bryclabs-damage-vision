@@ -18,10 +18,10 @@ The `mock` backend returns fake but valid output. Use it to develop the UI and t
 
 ## Live multi-model backend (orchestrator)
 
-With model API keys set, `app/api.py` runs an orchestrator: Claude, GPT and Gemini analyse the photo in parallel as
-subagents with the same JSON schema, findings are merged by cross-model agreement, and a Claude judge checks each
+With model API keys set, `app/api.py` runs an orchestrator: Gemini and GPT (and optionally Qwen-VL) analyse the photo
+in parallel as subagents with the same JSON schema, findings are merged by cross-model agreement, and a judge checks each
 finding against the photo and lists missing information. Deploy it on Vercel in a few minutes:
-[docs/deploy_api_vercel.md](docs/deploy_api_vercel.md). Code: `src/damagevision/orchestrator.py`, `claude_agents.py`.
+[docs/deploy_api_vercel.md](docs/deploy_api_vercel.md). Code: `src/damagevision/orchestrator.py`, `judge.py`.
 
 ## Demo website (GitHub Pages)
 

@@ -252,7 +252,7 @@ def inline_refs(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def strict_schema(model: type[BaseModel]) -> dict[str, Any]:
-    """Schema for strict structured outputs (Anthropic output_config.format, OpenAI strict):
+    """Schema for strict structured outputs (OpenAI strict json_schema):
     refs inlined, every object closed (additionalProperties false) with all keys required
     (optional values stay nullable through anyOf null), defaults and titles removed."""
     def walk(node):
