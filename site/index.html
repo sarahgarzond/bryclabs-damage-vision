@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=20">
+  <link rel="stylesheet" href="assets/style.css?v=pilot-20">
 </head>
 <body>
   <header class="top">
@@ -28,7 +28,7 @@
   <main class="wrap">
     <section class="intro">
       <h1>Damage evidence from a single photo.</h1>
-      <p>Structured findings for property claims, cross-checked by several vision models. Export as JSON or CSV.</p>
+      <p>Structured findings for property claims. Export as JSON or CSV.</p>
     </section>
 
     <label class="drop" id="drop" for="fileInput" tabindex="0">
@@ -95,6 +95,24 @@
         </div>
         <pre class="json" id="json" tabindex="0" aria-labelledby="resultTitle"></pre>
       </div>
+    </section>
+    <section class="pilot" aria-labelledby="pilot-title">
+      <h2 id="pilot-title">How the classifier performed</h2>
+      <p>20-image baseline with Llama 3.2 Vision, before the prompt revision.</p>
+      <dl class="pilot-grid">
+        <div><dt>Usable JSON</dt><dd>13 / 20</dd></div>
+        <div><dt>Clear damage detected</dt><dd>6 / 10</dd></div>
+        <div><dt>Strict finding matches</dt><dd>1 / 10</dd></div>
+        <div><dt>Hallucinations on negatives</dt><dd>1 / 5</dd><p>One bar chart triggered four invented findings. Three other negatives failed to return usable JSON.</p></div>
+        <div><dt>Ambiguous photos marked unclear</dt><dd>0 / 5</dd></div>
+        <div><dt>Median request time</dt><dd>8.0 s</dd></div>
+      </dl>
+      <details>
+        <summary>Method, examples and limits</summary>
+        <p>Reference labels were frozen before inference for 17 BrycLabs photos and three synthetic negatives. The set included ten clear, five ambiguous and five negative images. Labels were provisional and made by one AI reviewer. A strict match required the correct defect, component and visible cue. Failed requests stayed in the denominators.</p>
+        <p>The model correctly identified a thin wall crack above stairs. On an open floor-tile joint, it repeated the prompt's sample wall-crack description.</p>
+        <p>With the revised prompt, the stairwell still passed, the tile joint still received the wrong component, and the bar chart produced no usable JSON. A fresh evaluation of the revised prompt and the full feature vocabulary is pending.</p>
+      </details>
     </section>
   </main>
 
