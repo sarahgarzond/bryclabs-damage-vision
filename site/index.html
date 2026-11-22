@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=11">
+  <link rel="stylesheet" href="assets/style.css?v=12">
 </head>
 <body>
   <header class="top">
@@ -29,6 +29,11 @@
     <h1>Damage Evidence Extractor</h1>
     <p>Upload a property damage photo or explore an example to review structured findings and their evidence.</p>
 
+    <section class="samples" aria-label="Sample photos">
+      <p class="samples-title">Try a sample <span>· one click runs the real analysis</span></p>
+      <div class="sample-strip" id="samples"></div>
+    </section>
+
     <label class="drop" id="drop" for="fileInput" tabindex="0">
       <input type="file" id="fileInput" accept="image/*" hidden>
       <div class="drop-empty" id="dropEmpty">
@@ -43,38 +48,6 @@
         <div class="busy" id="busy" hidden><div class="spinner"></div><span id="busyText">Analysing…</span></div>
       </div>
     </label>
-
-    <details class="glass-example">
-      <summary class="btn">Try an example</summary>
-      <h2>Glass railing</h2>
-      <p>Manually annotated example of a fractured stair railing panel.</p>
-      <img src="examples/glass-railing.jpg" alt="Glass staircase railing with a fractured central panel" width="2048" height="1536" loading="lazy">
-      <h3>Example JSON</h3>
-      <pre class="json" tabindex="0">{
-  &quot;image_id&quot;: &quot;staircase_glass_01&quot;,
-  &quot;features&quot;: [
-    {
-      &quot;name&quot;: &quot;glass_fracture&quot;,
-      &quot;value&quot;: &quot;Widespread fracture in the central glass panel&quot;,
-      &quot;component&quot;: &quot;Staircase balustrade&quot;,
-      &quot;material&quot;: &quot;Glass&quot;,
-      &quot;status&quot;: &quot;visible&quot;,
-      &quot;uncertain&quot;: false,
-      &quot;evidence&quot;: &quot;Dense network of small, irregular fragments across the sloped panel beneath the metal handrail.&quot;,
-      &quot;box&quot;: [
-        290,
-        40,
-        715,
-        960
-      ]
-    }
-  ],
-  &quot;limitations&quot;: [
-    &quot;The cause and exact glass type cannot be established from the photo.&quot;,
-    &quot;The panel’s remaining load-bearing capacity cannot be assessed from the photo.&quot;
-  ]
-}</pre>
-    </details>
 
     <p class="upload-status" id="uploadStatus" role="status" hidden></p>
     <section class="out" id="out" hidden>
@@ -102,6 +75,10 @@
         <button class="btn" id="copyBtn" type="button">Copy JSON</button>
       </details>
     </section>
+    <details class="credits" id="creditsBox" hidden>
+      <summary>Sample photo credits</summary>
+      <ul id="credits"></ul>
+    </details>
   </main>
 
   <dialog id="connectDialog" class="dialog">
@@ -141,6 +118,6 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="assets/app.js?v=12"></script>
+  <script src="assets/app.js?v=13"></script>
 </body>
 </html>

@@ -1,0 +1,74 @@
+[
+ {
+  "id": "water",
+  "label": "Ceiling water stain",
+  "image": "examples/photos/water.jpg",
+  "thumb": "examples/photos/water-thumb.jpg",
+  "credit": {
+   "title": "Ceiling water damage.jpg",
+   "author": "Atomicdragon136",
+   "license": "CC BY 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Ceiling_water_damage.jpg"
+  }
+ },
+ {
+  "id": "mould",
+  "label": "Mould at a window",
+  "image": "examples/photos/mould.jpg",
+  "thumb": "examples/photos/mould-thumb.jpg",
+  "credit": {
+   "title": "Indoor Mold.jpg",
+   "author": "Alexander Davronov",
+   "license": "CC BY-SA 4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Indoor_Mold.jpg"
+  }
+ },
+ {
+  "id": "crack",
+  "label": "Cracked wall",
+  "image": "examples/photos/crack.jpg",
+  "thumb": "examples/photos/crack-thumb.jpg",
+  "credit": {
+   "title": "Cracked wall.jpg",
+   "author": "Almanta",
+   "license": "CC BY-SA 4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Cracked_wall.jpg"
+  }
+ },
+ {
+  "id": "paint",
+  "label": "Peeling paint",
+  "image": "examples/photos/paint.jpg",
+  "thumb": "examples/photos/paint-thumb.jpg",
+  "credit": {
+   "title": "Paint peeling off bathroom wall.jpg",
+   "author": "Doggo19292",
+   "license": "CC BY-SA 4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Paint_peeling_off_bathroom_wall.jpg"
+  }
+ },
+ {
+  "id": "glass",
+  "label": "Broken glass",
+  "image": "examples/glass-railing.jpg",
+  "thumb": "examples/photos/glass-thumb.jpg",
+  "credit": {
+   "title": "Glass railing",
+   "author": "Team photo",
+   "license": "",
+   "source": ""
+  }
+ },
+ {
+  "id": "roof",
+  "label": "Storm-damaged roof",
+  "image": "examples/photos/roof.jpg",
+  "thumb": "examples/photos/roof-thumb.jpg",
+  "credit": {
+   "title": "Asphalt shingles damage.jpg",
+   "author": "Samuel Bolton",
+   "license": "CC BY-SA 4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Asphalt_shingles_damage.jpg"
+  }
+ }
+]

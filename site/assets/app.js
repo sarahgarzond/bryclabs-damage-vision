@@ -261,11 +261,37 @@
   $("#infoClose").onclick = () => drawer.close();
   drawer.addEventListener("click", (e) => { if (e.target === drawer) drawer.close(); });
 
+  /* ---------- sample strip: each card runs the real analysis on a real photo ---------- */
+  async function loadSamples() {
+    const list = await loadJSON("examples/samples.json");
+    if (!list?.length) return;
+    const strip = $("#samples");
+    strip.innerHTML = list.map((x, i) => `<button class="sample" type="button" data-i="${i}" title="${esc(x.label)}">
+      <img src="${esc(x.thumb)}" alt="" loading="lazy"><span>${esc(x.label)}</span></button>`).join("");
+    strip.querySelectorAll(".sample").forEach((b) => b.addEventListener("click", async () => {
+      const x = list[+b.dataset.i];
+      strip.querySelectorAll(".sample").forEach((o) => o.classList.toggle("active", o === b));
+      b.classList.add("loading");
+      try {
+        const blob = await (await fetch(x.image)).blob();
+        await handleFile(new File([blob], x.id + ".jpg", { type: blob.type || "image/jpeg" }));
+      } catch { toast("Could not load the sample"); }
+      finally { b.classList.remove("loading"); }
+      $("#drop").scrollIntoView({ behavior: "smooth", block: "start" });
+    }));
+    const credited = list.filter((x) => x.credit?.license);
+    if (credited.length) {
+      $("#credits").innerHTML = credited.map((x) => `<li>${esc(x.label)}: <a href="${esc(x.credit.source)}" target="_blank" rel="noopener">${esc(x.credit.title)}</a> by ${esc(x.credit.author || "unknown")}, ${esc(x.credit.license)}, via Wikimedia Commons (resized)</li>`).join("");
+      $("#creditsBox").hidden = false;
+    }
+  }
+
   let tt;
   function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 3000); }
 
   const qs = new URLSearchParams(location.search).get("api");
   if (qs) store.set("dv_api", normalise(qs));
+  loadSamples();
   loadReliability().then(() => { if (state.result) renderCaveats(state.result, state.source); });
   async function connectDefault() {
     const saved = store.get("dv_api");
