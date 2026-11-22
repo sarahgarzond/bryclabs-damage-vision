@@ -51,7 +51,11 @@
   /* ---------- upload ---------- */
   const drop = $("#drop");
   let selection = 0;
-  $("#fileInput").onchange = (e) => handleFile(e.target.files[0]);
+  $("#fileInput").onchange = (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (file) handleFile(file);
+  };
   ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("drag"); }));
   ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("drag"); }));
   drop.addEventListener("drop", (e) => handleFile(e.dataTransfer.files[0]));
@@ -66,9 +70,13 @@
     const bmp = await createImageBitmap(file, { imageOrientation: "from-image" }).catch(() => null);
     if (!bmp) return file;
     const s = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
-    if (s === 1 && file.size < 3e6) return file;
-    const c = Object.assign(document.createElement("canvas"), { width: Math.round(bmp.width * s), height: Math.round(bmp.height * s) });
+    if (s === 1 && file.size < 3e6 && ["image/jpeg", "image/png"].includes(file.type)) {
+      bmp.close();
+      return file;
+    }
+    const c = Object.assign(document.createElement("canvas"), { width: Math.max(1, Math.round(bmp.width * s)), height: Math.max(1, Math.round(bmp.height * s)) });
     c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    bmp.close();
     return new Promise((res) => c.toBlob((b) => res(b ? new File([b], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }) : file), "image/jpeg", 0.9));
   }
 
@@ -88,17 +96,28 @@
       return;
     }
     $("#busy").hidden = false;
-    const steps = ["Analysing", "Cross-checking models", "Reviewing findings"]; let k = 0;
-    $("#busyText").textContent = steps[0];
-    const timer = setInterval(() => { k = Math.min(k + 1, steps.length - 1); $("#busyText").textContent = steps[k]; }, 3500);
+    $("#busyText").textContent = "Analysing photo…";
     try {
       const fd = new FormData(); fd.append("image", upload, upload.name || "upload.jpg");
       const r = await fetch(state.api + "/analyze", { method: "POST", body: fd });
-      if (!r.ok) throw new Error(await r.json().then((j) => j.detail).catch(() => "HTTP " + r.status));
-      const result = await r.json();
+      const result = await r.json().catch(() => null);
+      const detail = result?.detail || result?.limitations?.[0];
+      if (r.status === 429 || /quota exceeded|rate.?limit|neurons/i.test(detail || "")) {
+        throw new Error("The model usage limit was reached. Try again later.");
+      }
+      if (!r.ok) throw new Error(detail || "HTTP " + r.status);
+      if (!result || result.status === "error" || !Array.isArray(result.findings)) {
+        throw new Error(detail || "The model did not return usable JSON. Select the photo to retry.");
+      }
       if (current === selection) render(result, "live");
-    } catch (e) { if (current === selection) toast("Analysis failed: " + e.message); }
-    finally { clearInterval(timer); if (current === selection) $("#busy").hidden = true; }
+    } catch (e) {
+      if (current === selection) {
+        $("#uploadStatus").textContent = "Analysis failed. " + e.message;
+        $("#uploadStatus").hidden = false;
+      }
+    } finally {
+      if (current === selection) $("#busy").hidden = true;
+    }
   }
 
   /* ---------- render ---------- */
