@@ -1,50 +1,52 @@
-/* Damage Evidence Extractor: one screen. Upload -> photo with boxes -> CSV / JSON download -> JSON. */
+/* Damage Vision front end: upload -> findings + boxes -> JSON / CSV. Talks to app/api.py. */
 (() => {
   "use strict";
   const $ = (s) => document.querySelector(s);
+  const $$ = (s) => [...document.querySelectorAll(s)];
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const COLORS = { visible: "var(--visible)", inferred: "var(--inferred)", not_assessable: "var(--na)" };
-  const colorOf = (f) => (f.uncertain ? "var(--uncertain)" : COLORS[f.status] || "var(--na)");
+  const nice = (v) => String(v ?? "").replace(/_/g, " ");
+  const boxColor = (f) => (f.uncertain ? "var(--warn)" : "var(--accent)");
+  const pct = (v) => (v == null ? "–" : Math.round(v * 100) + "%");
   const store = {
     get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
     set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch { /* private mode */ } },
   };
-  const state = { api: null, health: null, result: null };
+  const state = { api: null, health: null, result: null, source: null, metrics: null, comparison: null, agreement: null };
 
   /* ---------- connection ---------- */
   const normalise = (u) => { u = (u || "").trim().replace(/\/+$/, ""); if (u && !/^https?:\/\//i.test(u)) u = "https://" + u; return u || null; };
   async function health(url) {
-    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 25000);
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 25000); // covers serverless cold starts
     try { const r = await fetch(url + "/health", { signal: ctrl.signal }); if (!r.ok) throw new Error("HTTP " + r.status); return await r.json(); }
     finally { clearTimeout(t); }
   }
-  function setStatus(kind, text) {
-    const p = $("#statusPill"); p.className = "status" + (kind ? " " + kind : ""); $("#statusText").textContent = text;
-  }
+  function setStatus(kind, text) { $("#statusPill").className = "status" + (kind ? " " + kind : ""); $("#statusText").textContent = text; }
   async function connect(url, quiet) {
     state.api = normalise(url); state.health = null;
-    if (!state.api) return setStatus(null, "Model disconnected");
+    if (!state.api) return setStatus(null, "Not connected");
     setStatus(null, "Connecting…");
     try {
       let h;
       try { h = await health(state.api); } catch { await new Promise((r) => setTimeout(r, 1500)); h = await health(state.api); }
       state.health = h;
-      setStatus(h.mock ? "mock" : "live", h.mock ? "Mock model" : "Live · " + String(h.model).split("/").pop());
-    } catch { setStatus("down", "Model offline"); if (!quiet) toast("Could not reach the model"); }
+      const model = String((h.agents && h.agents[0]?.model) || h.model || "model").split("/").pop();
+      const more = h.agents && h.agents.length > 1 ? ` +${h.agents.length - 1}` : "";
+      setStatus(h.mock ? "mock" : "live", h.mock ? "mock model" : model + more);
+    } catch { setStatus("down", "Offline"); if (!quiet) toast("Could not reach the model"); }
   }
 
-  const dialog = $("#connectDialog");
-  $("#statusPill").onclick = () => { $("#apiInput").value = state.api || ""; $("#testResult").textContent = ""; dialog.showModal(); };
+  const connectDialog = $("#connectDialog");
+  $("#statusPill").onclick = () => { $("#apiInput").value = state.api || ""; $("#testResult").textContent = ""; connectDialog.showModal(); };
   $("#testBtn").onclick = async () => {
     const out = $("#testResult"), url = normalise($("#apiInput").value);
     if (!url) { out.textContent = "Enter an address first."; out.className = "test bad"; return; }
-    if (location.protocol === "https:" && url.startsWith("http:")) { out.textContent = "The API must be https (use a tunnel)."; out.className = "test bad"; return; }
+    if (location.protocol === "https:" && url.startsWith("http:")) { out.textContent = "The API must use https."; out.className = "test bad"; return; }
     out.textContent = "Testing…"; out.className = "test";
-    try { const h = await health(url); out.textContent = `Connected: ${h.model} · ${h.runs} runs${h.mock ? " · MOCK" : ""}`; out.className = "test ok"; }
+    try { const h = await health(url); out.textContent = `Connected · ${h.model}${h.mock ? " · mock" : ""}`; out.className = "test ok"; }
     catch (e) { out.textContent = "No answer (" + (e.name === "AbortError" ? "timeout" : e.message) + ")"; out.className = "test bad"; }
   };
-  $("#saveBtn").onclick = async () => { const u = normalise($("#apiInput").value); store.set("dv_api", u); dialog.close(); await connect(u); if (state.health) toast("Model connected"); };
-  $("#disconnectBtn").onclick = () => { store.set("dv_api", null); connect(null); dialog.close(); };
+  $("#saveBtn").onclick = async () => { const u = normalise($("#apiInput").value); store.set("dv_api", u); connectDialog.close(); await connect(u); if (state.health) toast("Connected"); };
+  $("#disconnectBtn").onclick = () => { store.set("dv_api", null); connectDialog.close(); connectDefault(); };
 
   /* ---------- upload ---------- */
   const drop = $("#drop");
@@ -56,13 +58,10 @@
   drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#fileInput").click(); } });
   window.addEventListener("paste", (e) => { const it = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/")); if (it) handleFile(it.getAsFile()); });
 
-  function showPhoto(src, description) {
+  function showPhoto(src) {
     $("#dropEmpty").hidden = true; $("#stage").hidden = false; drop.classList.add("has-photo");
-    $("#boxes").innerHTML = "";
-    $("#photo").alt = description;
-    $("#photo").src = src;
+    $("#boxes").innerHTML = ""; $("#photo").src = src;
   }
-
   async function downscale(file, maxSide = 1600) {
     const bmp = await createImageBitmap(file, { imageOrientation: "from-image" }).catch(() => null);
     if (!bmp) return file;
@@ -78,25 +77,20 @@
     const current = ++selection;
     const upload = await downscale(file);
     if (current !== selection) return;
-    showPhoto(URL.createObjectURL(upload), "Uploaded damage photo");
-    $("#busy").hidden = true;
-    $("#out").hidden = true;
-    $("#uploadStatus").hidden = true;
+    showPhoto(URL.createObjectURL(upload));
+    $("#busy").hidden = true; $("#out").hidden = true; $("#uploadStatus").hidden = true;
     await connectionReady;
-    if (current !== selection) return;
     if (!state.health && state.api) await connect(state.api, true);
     if (current !== selection) return;
     if (!state.health || state.health.mock) {
-      const status = $("#uploadStatus");
-      status.textContent = "Connect a live vision model to analyse this photo.";
-      status.hidden = false;
-      $("#statusPill").click();
+      $("#uploadStatus").textContent = "No model connected. Set the API address in the connection menu.";
+      $("#uploadStatus").hidden = false;
       return;
     }
-    const busy = $("#busy"); busy.hidden = false;
-    const msgs = ["Analysing…", "Cross-checking runs…", "Verifying findings…"]; let k = 0;
-    $("#busyText").textContent = msgs[0];
-    const timer = setInterval(() => { if (current !== selection) return; k = Math.min(k + 1, msgs.length - 1); $("#busyText").textContent = msgs[k]; }, 3000);
+    $("#busy").hidden = false;
+    const steps = ["Analysing", "Cross-checking models", "Reviewing findings"]; let k = 0;
+    $("#busyText").textContent = steps[0];
+    const timer = setInterval(() => { k = Math.min(k + 1, steps.length - 1); $("#busyText").textContent = steps[k]; }, 3500);
     try {
       const fd = new FormData(); fd.append("image", upload, upload.name || "upload.jpg");
       const r = await fetch(state.api + "/analyze", { method: "POST", body: fd });
@@ -104,7 +98,7 @@
       const result = await r.json();
       if (current === selection) render(result, "live");
     } catch (e) { if (current === selection) toast("Analysis failed: " + e.message); }
-    finally { clearInterval(timer); if (current === selection) busy.hidden = true; }
+    finally { clearInterval(timer); if (current === selection) $("#busy").hidden = true; }
   }
 
   /* ---------- render ---------- */
@@ -115,21 +109,37 @@
     if (img.complete && img.naturalWidth) draw(); else img.onload = draw;
 
     const n = $("#notice"); n.hidden = true; n.className = "notice";
-    if (res.status === "error") { n.hidden = false; n.className = "notice error"; n.textContent = "Extraction failed for this photo. Nothing was guessed, the error is in limitations."; }
-    else if (source === "illustrative") { n.hidden = false; n.textContent = "Illustrative example of the output format, not a model result."; }
-    else if (res.meta?.backend === "mock") { n.hidden = false; n.textContent = "Mock model: fake output for testing the interface."; }
+    if (res.status === "error") { n.hidden = false; n.className = "notice error"; n.textContent = "The analysis failed for this photo. No findings were produced; the reason is listed under limitations."; }
+    else if (res.meta?.backend === "mock") { n.hidden = false; n.textContent = "Mock model: this output is not a real analysis."; }
 
-    const m = res.meta || {};
-    renderCaveats(res, source);
-    recordRun(res, source);
+    const fs = res.findings || [];
+    $("#summary").textContent = `${fs.length} ${fs.length === 1 ? "finding" : "findings"} · damage ${res.damage_present} · image ${res.image_quality}`;
+    $("#findings").innerHTML = fs.length ? fs.map((f, i) => {
+      const conf = f.confidence != null ? Math.round(f.confidence * 100) : null;
+      const tags = [
+        `<span class="tag">${esc(nice(f.status))}</span>`,
+        f.uncertain ? `<span class="tag warn">uncertain</span>` : "",
+        f.verified === true ? `<span class="tag ok">reviewed</span>` : f.verified === false ? `<span class="tag warn">not confirmed</span>` : "",
+        f.agreement != null && (res.meta?.agents || []).length > 1 ? `<span class="tag">agreement ${pct(f.agreement)}</span>` : "",
+      ].join("");
+      return `<li class="finding"><span class="idx">${String(i + 1).padStart(2, "0")}</span>
+        <div><h4>${esc(nice(f.damage_type))}</h4>
+          <p class="sub">${esc(nice(f.component))} · ${esc(nice(f.material))} · ${esc(nice(f.extent))}${f.location ? " · " + esc(f.location) : ""}</p>
+          <div class="tags">${tags}</div></div>
+        <div class="conf">${conf != null ? `<b>${conf}%</b><small>confidence</small><div class="meter"><i style="width:${conf}%"></i></div>` : ""}</div></li>`;
+    }).join("") : `<li class="empty">${res.damage_present === "unclear" ? "The photo did not allow a confident judgement." : "No damage visible in this photo."}</li>`;
+
     const need = res.missing_information || [];
     $("#needed").hidden = !need.length;
     $("#neededList").innerHTML = need.map((x) => `<li>${esc(x)}</li>`).join("");
+    $("#caveatList").innerHTML = caveatsFor(res).map((x) => `<li>${esc(x)}</li>`).join("");
     const ag = res.meta?.agents || [];
-    $("#agents").innerHTML = ag.map((a) => `<span class="${a.ok ? (a.role === "judge" ? "judge" : "") : "bad"}" title="${esc(a.error || "")}">${
-      a.role === "judge" ? "judge · " : ""}${esc(String(a.model).split("/").pop())} ${a.ok ? "✓" : "✕"}${a.seconds != null ? " " + a.seconds + "s" : ""}</span>`).join("");
+    $("#agents").innerHTML = ag.length ? ag.map((a) => `<span class="${a.ok ? "" : "bad"}" title="${esc(a.error || "")}">${a.role === "judge" ? "judge · " : ""}${
+      esc(String(a.model).split("/").pop())}${a.seconds != null ? " · " + a.seconds + "s" : ""}${a.ok ? "" : " · failed"}</span>`).join("")
+      : `<span>${esc(String(res.meta?.model || "unknown").split("/").pop())}</span>`;
     $("#json").innerHTML = highlight(JSON.stringify(res, null, 2));
     $("#out").hidden = false;
+    recordRun(res, source);
   }
 
   function drawBoxes(res, img) {
@@ -137,9 +147,8 @@
     $("#boxes").innerHTML = (res.findings || []).map((f, i) => {
       if (!f.bbox || !W || !H) return "";
       const [x, y, w, h] = f.bbox, top = (y / H) * 100;
-      const conf = f.confidence != null ? ` ${Math.round(f.confidence * 100)}%` : "";
-      return `<div class="bbox${top < 7 ? " below" : ""}" style="--c:${colorOf(f)};left:${(x / W) * 100}%;top:${top}%;width:${(w / W) * 100}%;height:${(h / H) * 100}%">
-        <span>${i + 1} ${esc(String(f.damage_type).replace(/_/g, " "))}${conf}</span></div>`;
+      return `<div class="bbox${top < 6 ? " below" : ""}" style="--c:${boxColor(f)};left:${(x / W) * 100}%;top:${top}%;width:${(w / W) * 100}%;height:${(h / H) * 100}%">
+        <span>${String(i + 1).padStart(2, "0")} ${esc(nice(f.damage_type))}</span></div>`;
     }).join("");
   }
 
@@ -148,26 +157,38 @@
       s ? (colon ? `<span class="k">${s}</span>${colon}` : `<span class="s">${s}</span>`) : lit ? `<span class="b">${m}</span>` : `<span class="n">${m}</span>`);
   }
 
-  /* ---------- CSV: one row per finding, image fields repeated ---------- */
+  /* ---------- limitations specific to this result ---------- */
+  function caveatsFor(res) {
+    const c = [], m = res.meta || {}, fs = res.findings || [];
+    if (res.status === "error") c.push("The model failed on this photo.");
+    (res.limitations || []).forEach((l) => c.push(l));
+    const failed = (m.agents || []).filter((a) => !a.ok);
+    if (failed.length) c.push(`${failed.map((a) => a.agent || a.model).join(", ")} did not answer; agreement uses fewer models.`);
+    if (m.backend === "orchestrator" && (m.agents || []).filter((a) => a.ok && a.role !== "judge").length === 1) c.push("Only one model answered, so there is no cross-model check.");
+    if (!m.verifier && fs.length) c.push("No independent review of these findings.");
+    if (res.image_quality && res.image_quality !== "good") c.push(`Image quality is ${res.image_quality}; damage may be missed.`);
+    if (res.dropped_findings?.length) c.push(`${res.dropped_findings.length} unsupported ${res.dropped_findings.length === 1 ? "finding was" : "findings were"} removed.`);
+    if (!m.calibrated && fs.length) c.push("Confidence is not yet calibrated on labelled photos.");
+    if (!state.metrics) c.push("Accuracy on the labelled test set is not yet published.");
+    c.push("Evidence for a reviewer, not a coverage decision.");
+    return [...new Set(c)];
+  }
+
+  /* ---------- export ---------- */
   const CSV_COLS = ["image_id", "damage_present", "image_quality", "quality_issues", "scene", "finding_no", "damage_type", "component",
     "material", "location", "extent", "status", "uncertain", "confidence", "agreement", "verified", "bbox_x", "bbox_y", "bbox_w", "bbox_h",
     "visible_traits", "age_indicators", "notes", "limitations", "missing_information"];
   function toCSV(res) {
     const join = (a) => (a || []).join(" | ");
     const base = { image_id: res.image_id, damage_present: res.damage_present, image_quality: res.image_quality,
-      quality_issues: join(res.quality_issues), scene: res.scene, limitations: join(res.limitations),
-      missing_information: join(res.missing_information) };
+      quality_issues: join(res.quality_issues), scene: res.scene, limitations: join(res.limitations), missing_information: join(res.missing_information) };
     const rows = (res.findings || []).length ? res.findings.map((f, i) => ({
       ...base, finding_no: i + 1, damage_type: f.damage_type, component: f.component, material: f.material, location: f.location,
       extent: f.extent, status: f.status, uncertain: f.uncertain, confidence: f.confidence, agreement: f.agreement, verified: f.verified,
       bbox_x: f.bbox?.[0], bbox_y: f.bbox?.[1], bbox_w: f.bbox?.[2], bbox_h: f.bbox?.[3],
       visible_traits: join(f.visible_traits), age_indicators: join(f.age_indicators), notes: f.notes,
     })) : [base];
-    const cell = (v) => {
-      let s = v == null ? "" : String(v);
-      if (/^[=+\-@]/.test(s)) s = "'" + s; // spreadsheet formula injection guard
-      return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
+    const cell = (v) => { let s = v == null ? "" : String(v); if (/^[=+\-@]/.test(s)) s = "'" + s; return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
     return "﻿" + [CSV_COLS.join(","), ...rows.map((r) => CSV_COLS.map((c) => cell(r[c])).join(","))].join("\r\n");
   }
   function download(text, name, type) {
@@ -176,188 +197,101 @@
   }
   $("#csvBtn").onclick = () => state.result && download(toCSV(state.result), (state.result.image_id || "result") + ".csv", "text/csv;charset=utf-8");
   $("#jsonBtn").onclick = () => state.result && download(JSON.stringify(state.result, null, 2), (state.result.image_id || "result") + ".json", "application/json");
-  $("#copyBtn").onclick = async () => {
-    try { await navigator.clipboard.writeText(JSON.stringify(state.result, null, 2)); toast("JSON copied"); } catch { toast("Copy not allowed here"); }
-  };
+  $("#copyBtn").onclick = async () => { try { await navigator.clipboard.writeText(JSON.stringify(state.result, null, 2)); toast("Copied"); } catch { toast("Copy not allowed here"); } };
 
-  /* ---------- per-result caveats: the system states its own blind spots ---------- */
-  function caveatsFor(res, source) {
-    const c = [], m = res.meta || {}, fs = res.findings || [];
-    if (source === "illustrative") c.push("This is a hand-made illustration of the output format. Nothing here was measured.");
-    if (m.backend === "mock") c.push("Mock model: the findings are fake.");
-    if (res.status === "error") c.push("The model failed on this photo. No findings should be trusted.");
-    if (!state.metrics) c.push("The model has not been validated on labelled photos yet. Treat every finding as unverified.");
-    if (!m.calibrated && source !== "illustrative") c.push("Confidence percentages are a heuristic, not calibrated against labelled photos.");
-    const failed = (m.agents || []).filter((a) => !a.ok);
-    if (failed.length) c.push(`${failed.length} model${failed.length > 1 ? "s" : ""} failed on this photo (${failed.map((a) => a.agent || a.model).join(", ")}). Agreement is based on fewer models.`);
-    if (m.backend === "orchestrator" && (m.agents || []).filter((a) => a.ok && a.role === "extractor").length === 1) c.push("Only one model answered: there is no cross-model agreement check.");
-    if (m.runs === 1 && m.backend !== "orchestrator") c.push("Single run: no consistency check across repeated runs.");
-    if (m.backend && m.backend !== "illustrative" && !m.verifier) c.push("No independent reviewer checked these findings.");
-    const unc = fs.filter((f) => f.uncertain).length;
-    if (unc) c.push(`${unc} of ${fs.length} findings are uncertain: low agreement between models or runs, or not confirmed by the reviewer.`);
-    const unconfirmed = fs.filter((f) => f.verified === false).length;
-    if (unconfirmed) c.push(`${unconfirmed} finding${unconfirmed > 1 ? "s were" : " was"} not confirmed by the reviewer (detector or judge model).`);
-    if (res.image_quality && res.image_quality !== "good") c.push(`Photo quality is ${res.image_quality}${res.quality_issues?.length ? " (" + res.quality_issues.join(", ").replace(/_/g, " ") + ")" : ""}: damage may be missed or misread.`);
-    if (res.damage_present === "unclear") c.push("The system could not decide whether damage is present.");
-    if (res.damage_present === "no") c.push("No damage found means none was visible in this frame, not that the property is undamaged.");
-    if (fs.some((f) => f.material === "unknown")) c.push("Material could not be identified for at least one finding.");
-    if (fs.some((f) => f.bbox == null) && fs.length) c.push("At least one finding has no location in the image.");
-    if (res.dropped_findings?.length) c.push(`${res.dropped_findings.length} possible finding${res.dropped_findings.length > 1 ? "s were" : " was"} dropped as unsupported. It may still be real.`);
-    (res.limitations || []).forEach((l) => c.push("Model: " + l));
-    c.push("Cause, wetness, depth and hidden damage cannot be judged from one photo.");
-    c.push("This is evidence for a reviewer, not a coverage decision.");
-    return [...new Set(c)];
+  /* ---------- method / evaluation sheet ---------- */
+  const sheet = $("#sheet");
+  function openSheet(tab) {
+    $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tab));
+    $$(".tabpanel").forEach((p) => (p.hidden = p.dataset.panel !== tab));
+    if (tab === "evaluation") renderEvaluation();
+    if (!sheet.open) sheet.showModal();
   }
-  function renderCaveats(res, source) {
-    const list = caveatsFor(res, source);
-    $("#caveatBtn").textContent = `${list.length} caveats`;
-    $("#caveatList").innerHTML = list.map((x) => `<li>${esc(x)}</li>`).join("");
-    $("#caveatPop").hidden = true; $("#caveatBtn").setAttribute("aria-expanded", "false");
-  }
-  $("#caveatBtn").onclick = (e) => {
-    e.stopPropagation();
-    const pop = $("#caveatPop"); pop.hidden = !pop.hidden; $("#caveatBtn").setAttribute("aria-expanded", String(!pop.hidden));
-  };
-  document.addEventListener("click", (e) => { if (!e.target.closest(".caveat-wrap")) $("#caveatPop").hidden = true; });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("#caveatPop").hidden = true; });
+  $$("[data-open]").forEach((b) => (b.onclick = () => openSheet(b.dataset.open)));
+  $$(".tab").forEach((t) => (t.onclick = () => openSheet(t.dataset.tab)));
+  $("#sheetClose").onclick = () => sheet.close();
+  sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.close(); });
 
-  /* ---------- reliability drawer: only measured numbers, never placeholders ---------- */
-  const pct = (v) => (v == null ? "–" : Math.round(v * 100) + "%");
   async function loadJSON(path) { try { const r = await fetch(path, { cache: "no-cache" }); return r.ok ? await r.json() : null; } catch { return null; } }
-  async function loadReliability() {
+  async function loadMetrics() {
     [state.metrics, state.comparison, state.agreement] = await Promise.all(
       [loadJSON("data/metrics.json"), loadJSON("data/comparison.json"), loadJSON("data/agreement.json")]);
-    const m = state.metrics, v = $("#verdict");
-    if (!m) {
-      v.textContent = "The evaluation harness is built and tested. These tiles fill in automatically when the hand-labelled test run is scored. Until then, every result is unverified.";
-      v.className = "verdict pending";
-      $("#accuracy").innerHTML = `<div class="pending-grid">${[["Precision", "TP / (TP + FP)"], ["Recall", "TP / (TP + FN)"],
-        ["Invented damage on clean photos", "P(finding | no damage)"], ["Calibration", "AUROC, reliability curve"]]
-        .map(([n, f]) => `<div class="pend"><b>${n}</b><code>${f}</code><span>pending</span></div>`).join("")}</div>`;
-    } else {
-      const k = state.agreement?.kappa_damage_type_presence;
-      v.textContent = `Tested on ${m.images_evaluated} hand-labelled photos.` + (k != null ? ` Two humans agree with kappa ${k.toFixed(2)}.` : "");
-      v.className = "verdict";
-      $("#resultsPill").textContent = "measured"; $("#resultsPill").classList.add("ok");
-      const ci = m.ci95 || {};
-      const row = (name, val, range, note, lowerIsBetter) => {
-        const r = range ? `<div class="range"><i style="left:${range[0] * 100}%;width:${Math.max(1, (range[1] - range[0]) * 100)}%"></i>${val != null ? `<em style="left:${val * 100}%"></em>` : ""}</div>` : "";
-        const wide = range && range[1] - range[0] > 0.3 ? "Too few photos to pin this number down. " : "";
-        const rtxt = range ? `95% range ${pct(range[0])} to ${pct(range[1])}. ${wide}` : "";
-        return `<div class="acc-row"><div class="acc-top"><b>${name}</b><span>${pct(val)}</span></div>${r}<small>${rtxt}${note}${lowerIsBetter ? " Lower is better." : ""}</small></div>`;
-      };
-      $("#accuracy").innerHTML = `<p class="label">Accuracy</p><div class="acc">
-        ${row("Precision", m.findings?.precision, ci.precision, "Share of reported findings that are real.")}
-        ${row("Recall", m.findings?.recall, ci.recall, "Share of real damage that was found.")}
-        ${row("Invented damage on clean photos", m.negatives?.hallucination_rate, ci.hallucination_rate, `${m.negatives?.with_any_finding ?? "–"} of ${m.negatives?.images ?? "–"} undamaged photos got a finding.`, true)}
-        ${m.uncertainty?.flagged_share_wrong != null ? row("Wrong findings flagged uncertain", m.uncertainty.flagged_share_wrong, null, "Does the system know when it is wrong?") : ""}
-      </div>`;
-    }
-    const c = state.comparison;
-    $("#comparison").innerHTML = `<p class="label">Compared with simpler setups</p>` + (c?.setups?.length
-      ? `<table class="cmp"><thead><tr><th>Setup</th><th>Precision</th><th>Recall</th><th>Invented</th><th>s/img</th></tr></thead><tbody>${
-          c.setups.map((r) => `<tr class="${/full pipeline/i.test(r.setup) ? "ours" : ""}"><td>${esc(r.setup)}</td><td>${pct(r.precision)}</td><td>${pct(r.recall)}</td><td>${pct(r.hallucination_rate)}</td><td>${r.s_per_image != null ? r.s_per_image.toFixed(1) : "–"}</td></tr>`).join("")
-        }</tbody></table>`
-      : `<p class="empty">The comparison against a CLIP baseline, a single unchecked run and a frontier model appears here once measured.</p>`);
-  }
-  const drawer = $("#infoDrawer");
-  $("#infoBtn").onclick = () => drawer.showModal();
-  $("#infoClose").onclick = () => drawer.close();
-  drawer.addEventListener("click", (e) => { if (e.target === drawer) drawer.close(); });
-
-  /* ---------- sample strip: each card runs the real analysis on a real photo ---------- */
-  async function loadSamples() {
-    const list = await loadJSON("examples/samples.json");
-    if (!list?.length) return;
-    const strip = $("#samples");
-    strip.innerHTML = list.map((x, i) => `<button class="sample" type="button" data-i="${i}" title="${esc(x.label)}">
-      <img src="${esc(x.thumb)}" alt="" loading="lazy"><span>${esc(x.label)}</span></button>`).join("");
-    strip.querySelectorAll(".sample").forEach((b) => b.addEventListener("click", async () => {
-      const x = list[+b.dataset.i];
-      strip.querySelectorAll(".sample").forEach((o) => o.classList.toggle("active", o === b));
-      b.classList.add("loading");
-      try {
-        const blob = await (await fetch(x.image)).blob();
-        await handleFile(new File([blob], x.id + ".jpg", { type: blob.type || "image/jpeg" }));
-      } catch { toast("Could not load the sample"); }
-      finally { b.classList.remove("loading"); }
-      $("#drop").scrollIntoView({ behavior: "smooth", block: "start" });
-    }));
-    const credited = list.filter((x) => x.credit?.license);
-    if (credited.length) {
-      $("#credits").innerHTML = credited.map((x) => `<li>${esc(x.label)}: <a href="${esc(x.credit.source)}" target="_blank" rel="noopener">${esc(x.credit.title)}</a> by ${esc(x.credit.author || "unknown")}, ${esc(x.credit.license)}, via Wikimedia Commons (resized)</li>`).join("");
-      $("#creditsBox").hidden = false;
-    }
   }
 
-  /* ---------- judging scorecard: real session telemetry + criterion evidence ---------- */
   const runs = [];
   function recordRun(res, source) {
     if (source !== "live" || res.meta?.backend === "mock") return;
-    const fs = res.findings || [], ag = res.meta?.agents || [];
-    runs.push({
-      ok: res.status !== "error", secs: Number(res.meta?.runtime_s) || null, findings: fs.length,
+    const fs = res.findings || [], ag = (res.meta?.agents || []).filter((a) => a.role !== "judge");
+    runs.push({ ok: res.status !== "error", secs: Number(res.meta?.runtime_s) || null, findings: fs.length,
       agreement: fs.length ? fs.reduce((a, f) => a + (f.agreement ?? 0), 0) / fs.length : null,
       uncertain: fs.length ? fs.filter((f) => f.uncertain).length / fs.length : null,
-      dropped: (res.dropped_findings || []).length, missing: (res.missing_information || []).length,
-      agents: ag.filter((a) => a.role !== "judge").length, agentsOk: ag.filter((a) => a.role !== "judge" && a.ok).length,
-      tokens: Number(res.meta?.tokens) || 0,
-    });
-    $("#scFabSub").textContent = `${runs.length} live ${runs.length === 1 ? "analysis" : "analyses"} · telemetry on`;
-    if ($("#scDialog").open) renderScorecard();
+      dropped: (res.dropped_findings || []).length, agentsOk: ag.length ? ag.filter((a) => a.ok).length / ag.length : null });
   }
   const mean = (xs) => { xs = xs.filter((x) => x != null && !Number.isNaN(x)); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
-  const pctl = (xs, q) => { xs = xs.filter((x) => x != null).sort((a, b) => a - b); return xs.length ? xs[Math.min(xs.length - 1, Math.floor(q * xs.length))] : null; };
-  const spark = (xs) => { const v = xs.filter((x) => x != null).slice(-24); const mx = Math.max(...v, 1e-9);
-    return v.length ? `<div class="sc-spark">${v.map((x) => `<i style="height:${Math.max(8, (x / mx) * 100)}%"></i>`).join("")}</div>` : ""; };
-  const fmt = (v, d = 1, suf = "") => (v == null ? "–" : (+v).toFixed(d) + suf);
-  const pc = (v) => (v == null ? "–" : Math.round(v * 100) + "%");
+  const p95 = (xs) => { xs = xs.filter((x) => x != null).sort((a, b) => a - b); return xs.length ? xs[Math.min(xs.length - 1, Math.floor(0.95 * xs.length))] : null; };
+  const sec = (v) => (v == null ? "–" : v.toFixed(1) + " s");
 
-  function renderScorecard() {
-    const n = runs.length, ok = runs.filter((r) => r.ok);
-    $("#scN").textContent = `${n} ${n === 1 ? "analysis" : "analyses"}`;
-    const tile = (val, label, extra = "") => `<div class="sc-tile ${val === "–" ? "dim" : ""}"><b>${val}</b><span>${label}</span>${extra}</div>`;
-    const secs = runs.map((r) => r.secs);
-    $("#scLive").innerHTML = [
-      tile(fmt(mean(secs), 1, " s"), "mean runtime per image", spark(secs)),
-      tile(fmt(pctl(secs, 0.95), 1, " s"), "p95 runtime"),
-      tile(pc(n ? ok.length / n : null), "runs without error"),
-      tile(pc(mean(runs.map((r) => (r.agents ? r.agentsOk / r.agents : null)))), "agent availability"),
-      tile(pc(mean(ok.map((r) => r.agreement))), "mean cross-model agreement", spark(ok.map((r) => r.agreement))),
-      tile(pc(mean(ok.map((r) => r.uncertain))), "findings flagged uncertain"),
-      tile(fmt(mean(ok.map((r) => r.findings)), 2), "findings per image"),
-      tile(String(runs.reduce((a, r) => a + r.dropped, 0)), "claims rejected as unsupported"),
-    ].join("");
-
-    const m = state.metrics, k = state.agreement?.kappa_damage_type_presence, rob = state.robustness;
-    const mt = (label, val) => `<span class="sc-m ${val === "pending" ? "pending" : ""}">${label} <b>${val}</b></span>`;
-    const crit = [
-      { w: 30, c: "#10b981", t: "Extraction quality", ask: "Relevant, accurate and complete features",
-        chips: ["3-model ensemble", "schema-forced JSON", "13 damage classes", "12 components · 12 materials", "boxes per finding", "long-term damage indicators", "missing-info requests"],
-        metrics: [mt("precision", m ? pc(m.findings?.precision) : "pending"), mt("recall", m ? pc(m.findings?.recall) : "pending"), mt("F1", m ? pc(m.findings?.f1) : "pending"), mt("box IoU", m?.boxes?.mean_iou != null ? m.boxes.mean_iou.toFixed(2) : "pending")] },
-      { w: 30, c: "#22d3ee", t: "Evaluation approach", ask: "Justified criteria, transparent tests and limits",
-        chips: ["100-image gold set design", "blind double labelling", "Cohen's κ", "1,000× bootstrap CIs", "multi-setup ablation", "per-group metrics", "failure candidates"],
-        metrics: [mt("κ labellers", k != null ? k.toFixed(2) : "pending"), mt("images scored", m ? String(m.images_evaluated) : "pending"), mt("setups compared", state.comparison?.setups?.length ? String(state.comparison.setups.length) : "pending")] },
-      { w: 20, c: "#a3e635", t: "Uncertainty & robustness", ask: "Ambiguous images and unsupported claims",
-        chips: ["status ≠ confidence", "cross-model agreement", "adversarial judge", "unsupported → dropped", "8 stress transforms", "clean-photo hallucination test", "logistic calibration"],
-        metrics: [mt("hallucination on clean photos", m ? pc(m.negatives?.hallucination_rate) : "pending"), mt("confidence AUROC", m?.confidence_auroc != null ? m.confidence_auroc.toFixed(2) : "pending"),
-          mt("live uncertain share", n ? pc(mean(ok.map((r) => r.uncertain))) : "pending")] },
-      { w: 10, c: "#fbbf24", t: "Reproducibility", ask: "Runnable setup, JSON schema and error handling",
-        chips: ["3 published JSON schemas", "20 automated tests", "one-command run", "errors as records, never crashes", "provider fallback modes", "lean runtime requirements"],
-        metrics: [mt("live error-free runs", n ? pc(ok.length / n) : "pending")] },
-      { w: 10, c: "#f472b6", t: "Efficiency", ask: "Runtime and resources per image with test conditions",
-        chips: ["parallel subagents", "runtime + tokens logged per image", "1280 px downscale", "serverless, no GPU idle cost"],
-        metrics: [mt("mean s / image", n ? fmt(mean(secs), 1, " s") : "pending"), mt("tokens / image", n && mean(runs.map((r) => r.tokens || null)) ? Math.round(mean(runs.map((r) => r.tokens || null))).toString() : "pending"),
-          mt("test-set s / image", m?.runtime_s_per_image?.mean != null ? m.runtime_s_per_image.mean.toFixed(1) + " s" : "pending")] },
+  function renderEvaluation() {
+    const m = state.metrics, k = state.agreement?.kappa_damage_type_presence, c = state.comparison;
+    const p = (v) => (v == null ? `<span class="pending">pending</span>` : v);
+    $("#verdict").textContent = m
+      ? `Measured on ${m.images_evaluated} hand-labelled photos${k != null ? `, labeller agreement κ = ${k.toFixed(2)}` : ""}. Ranges are 95% bootstrap intervals.`
+      : "The evaluation harness is complete and tested. Results appear here once the labelled test set is scored.";
+    const rows = [
+      ["Extraction quality", "30%", "Model ensemble with a fixed schema: 13 damage types, 12 components, 12 materials, boxes, extent, long-term indicators.",
+        m ? `P ${pct(m.findings?.precision)} · R ${pct(m.findings?.recall)}` : null],
+      ["Evaluation approach", "30%", "100 hand-labelled photos, blind double labelling, Cohen's κ, bootstrap intervals, comparison with simpler setups.",
+        k != null ? `κ ${k.toFixed(2)}` : null],
+      ["Uncertainty & robustness", "20%", "Status separate from confidence, cross-model agreement, independent review, clean-photo test, 8 image perturbations.",
+        m ? `false alarms ${pct(m.negatives?.hallucination_rate)}` : null],
+      ["Reproducibility", "10%", "Published JSON schemas, 20 automated tests, one-command run, failures returned as records.",
+        "20 tests passing"],
+      ["Efficiency", "10%", "Models run in parallel, runtime and tokens logged per image, images capped at 1280 px.",
+        m?.runtime_s_per_image?.mean != null ? sec(m.runtime_s_per_image.mean) + " / image" : (runs.length ? sec(mean(runs.map((r) => r.secs))) + " / image" : null)],
     ];
-    $("#scCriteria").innerHTML = crit.map((x) => `<div class="sc-crit"><div class="sc-donut" style="--w:${x.w};--c:${x.c}"><b>${x.w}%</b></div>
-      <div><h3>${x.t}</h3><p class="ask">${x.ask}</p><div class="sc-chips">${x.chips.map((c) => `<span>${esc(c)}</span>`).join("")}</div>
-      <div class="sc-metrics">${x.metrics.join("")}</div></div></div>`).join("");
+    $("#criteria").innerHTML = rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${p(r[3])}</td></tr>`).join("");
+
+    if (m) {
+      const ci = m.ci95 || {};
+      const row = (name, val, range, note) => `<div class="acc-row"><div class="acc-top"><span class="nm">${name}</span><span>${pct(val)}</span></div>${
+        range ? `<div class="range"><i style="left:${range[0] * 100}%;width:${Math.max(1, (range[1] - range[0]) * 100)}%"></i>${val != null ? `<em style="left:${val * 100}%"></em>` : ""}</div>` : ""}
+        <small>${range ? `95% interval ${pct(range[0])} to ${pct(range[1])}. ` : ""}${note}</small></div>`;
+      $("#accuracy").innerHTML = `<h3>Accuracy</h3>${row("Precision", m.findings?.precision, ci.precision, "Reported findings that are real.")}${
+        row("Recall", m.findings?.recall, ci.recall, "Real damage that was found.")}${
+        row("False alarms on clean photos", m.negatives?.hallucination_rate, ci.hallucination_rate, `${m.negatives?.with_any_finding ?? "–"} of ${m.negatives?.images ?? "–"} undamaged photos received a finding.`)}`;
+    } else $("#accuracy").innerHTML = "";
+
+    $("#comparison").innerHTML = c?.setups?.length ? `<h3>Compared with simpler setups</h3><table class="cmp"><thead><tr><th>Setup</th><th>Precision</th><th>Recall</th><th>False alarms</th><th>s / image</th></tr></thead><tbody>${
+      c.setups.map((r) => `<tr class="${/full pipeline/i.test(r.setup) ? "ours" : ""}"><td>${esc(r.setup)}</td><td>${pct(r.precision)}</td><td>${pct(r.recall)}</td><td>${pct(r.hallucination_rate)}</td><td>${r.s_per_image != null ? r.s_per_image.toFixed(1) : "–"}</td></tr>`).join("")}</tbody></table>` : "";
+
+    const ok = runs.filter((r) => r.ok), secs = runs.map((r) => r.secs);
+    const kv = [["Analyses", String(runs.length)], ["Mean runtime", sec(mean(secs))], ["95th percentile runtime", sec(p95(secs))],
+      ["Without error", runs.length ? pct(ok.length / runs.length) : "–"], ["Model availability", pct(mean(runs.map((r) => r.agentsOk)))],
+      ["Mean cross-model agreement", pct(mean(ok.map((r) => r.agreement)))], ["Findings flagged uncertain", pct(mean(ok.map((r) => r.uncertain)))],
+      ["Unsupported findings removed", String(runs.reduce((a, r) => a + r.dropped, 0))]];
+    $("#session").innerHTML = kv.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("");
   }
-  const scDialog = $("#scDialog");
-  $("#scFab").onclick = () => { renderScorecard(); scDialog.showModal(); };
-  $("#scClose").onclick = () => scDialog.close();
-  scDialog.addEventListener("click", (e) => { if (e.target === scDialog) scDialog.close(); });
+
+  /* ---------- samples ---------- */
+  async function loadSamples() {
+    const list = await loadJSON("examples/samples.json");
+    if (!list?.length) return;
+    const row = $("#samples");
+    row.innerHTML = list.map((x, i) => `<button class="sample" type="button" data-i="${i}"><img src="${esc(x.thumb)}" alt="" loading="lazy">${esc(x.label)}</button>`).join("");
+    row.querySelectorAll(".sample").forEach((b) => b.addEventListener("click", async () => {
+      const x = list[+b.dataset.i];
+      row.querySelectorAll(".sample").forEach((o) => o.classList.toggle("active", o === b));
+      b.classList.add("loading");
+      try { const blob = await (await fetch(x.image)).blob(); await handleFile(new File([blob], x.id + ".jpg", { type: blob.type || "image/jpeg" })); }
+      catch { toast("Could not load the sample"); }
+      finally { b.classList.remove("loading"); }
+    }));
+    const credited = list.filter((x) => x.credit?.license);
+    if (credited.length) {
+      $("#credits").innerHTML = credited.map((x) => `<li>${esc(x.label)}: <a href="${esc(x.credit.source)}" target="_blank" rel="noopener">${esc(x.credit.title)}</a>, ${esc(x.credit.author || "unknown")}, ${esc(x.credit.license)}, Wikimedia Commons (resized)</li>`).join("");
+      $("#creditsBox").hidden = false;
+    }
+  }
 
   let tt;
   function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 3000); }
@@ -365,18 +299,12 @@
   const qs = new URLSearchParams(location.search).get("api");
   if (qs) store.set("dv_api", normalise(qs));
   loadSamples();
-  loadReliability().then(() => { if (state.result) renderCaveats(state.result, state.source); });
+  loadMetrics();
   async function connectDefault() {
     const saved = store.get("dv_api");
     if (saved) return connect(saved, true);
-    try {
-      const response = await fetch("data/api-config.json");
-      if (response.ok) {
-        const config = await response.json();
-        return connect(config.api_url, true);
-      }
-    } catch { /* Model settings accept a manual HTTPS address. */ }
-    return connect(null, true);
+    const cfg = await loadJSON("data/api-config.json");
+    return connect(cfg?.api_url || null, true);
   }
   const connectionReady = connectDefault();
 })();

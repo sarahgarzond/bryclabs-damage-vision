@@ -3,191 +3,183 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Damage Evidence Extractor</title>
-  <meta name="description" content="Upload a property damage photo and get verified, structured evidence as JSON and CSV.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M9 17l5 5 9-11' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <title>Damage Vision</title>
+  <meta name="description" content="Structured, verified damage evidence from a single photo. JSON and CSV export.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0a0a'/%3E%3Crect x='8' y='8' width='16' height='16' rx='2' fill='none' stroke='white' stroke-width='2.5'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=15">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=20">
 </head>
 <body>
   <header class="top">
-    <span class="brand">BRYCLABS / DAMAGE VISION</span>
-    <div class="top-actions">
-    <button class="info-dot" id="infoBtn" type="button" aria-haspopup="dialog" aria-label="How reliable is this?" title="How reliable is this?">
-      <span class="ring" aria-hidden="true"></span>i
-    </button>
-    <button class="status" id="statusPill" type="button" aria-haspopup="dialog" aria-label="Model settings" title="Model settings">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
-      <span class="dot" aria-hidden="true"></span><span id="statusText" class="sr-only">Model settings</span>
-    </button>
+    <div class="wrap top-inner">
+      <a class="brand" href="./"><span class="mark" aria-hidden="true"></span>Damage Vision</a>
+      <nav class="nav">
+        <button class="link" type="button" data-open="method">Method</button>
+        <button class="link" type="button" data-open="evaluation">Evaluation</button>
+        <button class="status" id="statusPill" type="button" aria-haspopup="dialog" title="Model connection">
+          <span class="dot" aria-hidden="true"></span><span id="statusText">Connecting…</span>
+        </button>
+      </nav>
     </div>
   </header>
 
-  <main class="page">
-    <h1>Damage Evidence Extractor</h1>
-    <p>Upload a property damage photo or explore an example to review structured findings and their evidence.</p>
-
-    <section class="samples" aria-label="Sample photos">
-      <p class="samples-title">Try a sample <span>· one click runs the real analysis</span></p>
-      <div class="sample-strip" id="samples"></div>
+  <main class="wrap">
+    <section class="intro">
+      <h1>Damage evidence from a single photo.</h1>
+      <p>Structured findings for property claims, cross-checked by several vision models. Export as JSON or CSV.</p>
     </section>
 
     <label class="drop" id="drop" for="fileInput" tabindex="0">
       <input type="file" id="fileInput" accept="image/*" hidden>
       <div class="drop-empty" id="dropEmpty">
-        <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 32V12m0 0l-8 8m8-8l8 8"/><path d="M8 32v5a4 4 0 004 4h24a4 4 0 004-4v-5"/></svg>
-        <strong>Add, drop or paste your image</strong>
-        <span class="pick">Choose photo</span>
-        <span>JPG, PNG or HEIC · paste works too</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16.5V18a2 2 0 002 2h12a2 2 0 002-2v-1.5"/><path d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5"/></svg>
+        <p><strong>Drop an image</strong>, paste, or <span class="u">browse</span></p>
+        <small>JPG, PNG or HEIC</small>
       </div>
       <div class="stage" id="stage" hidden>
         <img id="photo" alt="Uploaded photo">
         <div class="boxes" id="boxes"></div>
-        <div class="busy" id="busy" hidden><div class="spinner"></div><span id="busyText">Analysing…</span></div>
+        <div class="busy" id="busy" hidden><span class="spinner"></span><span id="busyText">Analysing</span></div>
       </div>
     </label>
 
+    <section class="samples" aria-label="Sample photos">
+      <span class="samples-label">Samples</span>
+      <div class="sample-row" id="samples"></div>
+    </section>
+
     <p class="upload-status" id="uploadStatus" role="status" hidden></p>
+
     <section class="out" id="out" hidden>
       <div class="notice" id="notice" hidden></div>
-      <div class="actions">
-        <h2 class="result-title" id="resultTitle">JSON</h2>
-        <button class="btn primary icon-btn" id="jsonBtn" type="button" aria-label="Download JSON" title="Download JSON">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5"/><path d="M5 19h14"/></svg>
-        </button>
-        <div class="caveat-wrap">
-          <button class="caveat-chip" id="caveatBtn" type="button" aria-expanded="false" aria-controls="caveatPop"></button>
-          <div class="caveat-pop" id="caveatPop" role="dialog" aria-label="Caveats for this result" hidden>
-            <p class="pop-title">What this result cannot tell you</p>
-            <ul id="caveatList"></ul>
+      <div class="result-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Findings</h2>
+            <span class="summary" id="summary"></span>
+          </div>
+          <ol class="findings" id="findings"></ol>
+        </div>
+        <div class="panel side">
+          <div class="block" id="needed" hidden>
+            <h3>Still needed</h3>
+            <ul id="neededList"></ul>
+          </div>
+          <div class="block">
+            <h3>Limitations</h3>
+            <ul class="muted-list" id="caveatList"></ul>
+          </div>
+          <div class="block">
+            <h3>Models</h3>
+            <p class="agents" id="agents"></p>
           </div>
         </div>
       </div>
-      <div class="needed" id="needed" hidden>
-        <p class="pop-title">Still needed for this claim</p>
-        <ul id="neededList"></ul>
+
+      <div class="json-panel">
+        <div class="json-head">
+          <h2 id="resultTitle">JSON</h2>
+          <div class="icons">
+            <button class="icon" id="copyBtn" type="button" title="Copy JSON" aria-label="Copy JSON">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/></svg>
+            </button>
+            <button class="icon" id="csvBtn" type="button" title="Download CSV" aria-label="Download CSV">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16"/></svg>
+            </button>
+            <button class="icon primary" id="jsonBtn" type="button" title="Download JSON" aria-label="Download JSON">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5"/><path d="M5 19h14"/></svg>
+            </button>
+          </div>
+        </div>
+        <pre class="json" id="json" tabindex="0" aria-labelledby="resultTitle"></pre>
       </div>
-      <p class="agents" id="agents"></p>
-      <pre class="json" id="json" tabindex="0" aria-labelledby="resultTitle"></pre>
-      <details class="extra-exports">
-        <summary>More export options</summary>
-        <button class="btn" id="csvBtn" type="button">Download CSV</button>
-        <button class="btn" id="copyBtn" type="button">Copy JSON</button>
-      </details>
     </section>
-    <details class="credits" id="creditsBox" hidden>
+  </main>
+
+  <footer class="wrap foot">
+    <span>Damage Vision · BrycLabs challenge, Campus Founders Hackathon 2026</span>
+    <details id="creditsBox" hidden>
       <summary>Sample photo credits</summary>
       <ul id="credits"></ul>
     </details>
-  </main>
+  </footer>
 
-  <dialog id="connectDialog" class="dialog">
-    <form method="dialog" class="dialog-body">
-      <h3>Connect the model</h3>
-      <p>Enter the HTTPS address of the damage analysis API.</p>
-      <input type="url" id="apiInput" placeholder="https://your-tunnel.trycloudflare.com" autocomplete="off">
+  <dialog id="sheet" class="sheet" aria-label="Method and evaluation">
+    <div class="sheet-inner">
+      <div class="sheet-head">
+        <div class="tabs" role="tablist">
+          <button role="tab" class="tab" data-tab="method">Method</button>
+          <button role="tab" class="tab" data-tab="evaluation">Evaluation</button>
+        </div>
+        <button class="icon" id="sheetClose" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <section class="tabpanel" data-panel="method">
+        <h2>How a photo becomes evidence</h2>
+        <ol class="steps">
+          <li><b>Ensemble.</b> Independent vision models read the photo, each constrained to the same JSON schema with a fixed vocabulary of 13 damage types, 12 building components and 12 materials.</li>
+          <li><b>Fusion.</b> Findings are matched across models by type and box overlap. Agreement is the share of models that report a finding.</li>
+          <li><b>Review.</b> A separate judge model checks every merged finding against the pixels: supported, uncertain or unsupported.</li>
+          <li><b>Rules.</b> Unsupported findings without majority agreement are removed and kept for audit. Unconfirmed or low-agreement findings are flagged uncertain.</li>
+          <li><b>Output.</b> Schema-valid JSON with boxes, status, confidence, limitations and the information an adjuster still needs.</li>
+        </ol>
+
+        <h3>Definitions</h3>
+        <dl class="defs">
+          <dt>Agreement</dt><dd><code>a(f) = (1/M) · Σ<sub>m</sub> 1[f ∈ F<sub>m</sub>]</code>, matched when types agree and IoU ≥ 0.2</dd>
+          <dt>Box overlap</dt><dd><code>IoU(A, B) = |A ∩ B| / |A ∪ B|</code></dd>
+          <dt>Confidence</dt><dd><code>p = σ(β<sub>0</sub> + βᵀx)</code>, logistic regression on agreement, judge verdict and flags, fitted on labelled photos</dd>
+          <dt>Uncertainty</dt><dd><code>CI<sub>95</sub> = [q<sub>0.025</sub>, q<sub>0.975</sub>]</code> over B = 1,000 bootstrap resamples of test images</dd>
+          <dt>Label reliability</dt><dd><code>κ = (p<sub>o</sub> − p<sub>e</sub>) / (1 − p<sub>e</sub>)</code>, Cohen's kappa between two blind labellers</dd>
+          <dt>Robustness</dt><dd><code>J(S, S′) = |S ∩ S′| / |S ∪ S′|</code> under blur, darkness, JPEG compression, crop, rotation, flip and low resolution</dd>
+          <dt>Ranking</dt><dd><code>AUROC = P(c⁺ &gt; c⁻)</code>, whether correct findings receive higher confidence</dd>
+        </dl>
+
+        <h3>What a photo cannot establish</h3>
+        <ul class="muted-list">
+          <li>Cause, wetness, depth or hidden damage. These are listed as limitations, never as findings.</li>
+          <li>Coverage. The output is evidence for a reviewer, not a decision.</li>
+        </ul>
+      </section>
+
+      <section class="tabpanel" data-panel="evaluation" hidden>
+        <h2>Evaluation against the judging criteria</h2>
+        <p class="lead" id="verdict"></p>
+        <table class="criteria">
+          <thead><tr><th>Criterion</th><th>Weight</th><th>Approach</th><th>Result</th></tr></thead>
+          <tbody id="criteria"></tbody>
+        </table>
+
+        <div id="accuracy"></div>
+        <div id="comparison"></div>
+
+        <h3>This session</h3>
+        <table class="kv" id="session"></table>
+        <p class="fine">Computed in the browser from live analyses in this session.</p>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="connectDialog" class="modal">
+    <form method="dialog" class="modal-body">
+      <h3>Model connection</h3>
+      <p>HTTPS address of the analysis API.</p>
+      <input type="url" id="apiInput" placeholder="https://bryclabs-damage-vision.vercel.app" autocomplete="off">
       <p class="test" id="testResult"></p>
-      <div class="dialog-actions">
-        <button class="btn" type="button" id="disconnectBtn">Reset connection</button>
+      <div class="modal-actions">
+        <button class="btn ghost" type="button" id="disconnectBtn">Reset</button>
         <span class="spacer"></span>
-        <button class="btn" type="button" id="testBtn">Test</button>
-        <button class="btn primary" type="button" id="saveBtn">Save</button>
+        <button class="btn ghost" type="button" id="testBtn">Test</button>
+        <button class="btn" type="button" id="saveBtn">Save</button>
       </div>
     </form>
   </dialog>
 
-  <dialog id="infoDrawer" class="drawer" aria-label="How reliable is this?">
-    <div class="drawer-body">
-      <button class="drawer-close" id="infoClose" type="button" aria-label="Close">×</button>
-      <p class="kicker">Under the hood</p>
-      <h2 class="uh-title">Multi-model ensemble, adversarial review, calibrated uncertainty.</h2>
-      <div class="stats">
-        <div><b>3 + 1</b><span>vision agents in parallel, plus a judge</span></div>
-        <div><b>13</b><span>damage classes in a fixed ontology</span></div>
-        <div><b>1,000</b><span>bootstrap resamples per metric</span></div>
-        <div><b>8</b><span>stress transforms per test image</span></div>
-      </div>
-
-      <p class="label">Pipeline</p>
-      <ol class="flow">
-        <li><i>01</i><b>Ensemble</b><span>Gemini, GPT and Qwen-VL read the photo independently, each forced into the same JSON schema</span></li>
-        <li><i>02</i><b>Fusion</b><span>Findings are clustered across models by type and box overlap</span></li>
-        <li><i>03</i><b>Adversarial judge</b><span>A separate model tries to refute every finding against the pixels</span></li>
-        <li><i>04</i><b>Calibration</b><span>Agreement and verdicts are mapped to a probability of being correct</span></li>
-        <li><i>05</i><b>Evidence</b><span>Schema-valid JSON, boxes, caveats and the information still needed</span></li>
-      </ol>
-
-      <p class="label">The math</p>
-      <div class="math">
-        <div class="eq"><p class="eq-name">Cross-model agreement</p>
-          <p class="f">a(f) = <span class="frac"><span>1</span><span>M</span></span> &sum;<sub>m</sub> &#120793;[ f &isin; F<sub>m</sub> ]</p>
-          <p class="eq-note">Share of the M models that report finding f. Findings match when types agree and IoU &ge; 0.2.</p></div>
-        <div class="eq"><p class="eq-name">Box overlap</p>
-          <p class="f">IoU(A, B) = <span class="frac"><span>|A &cap; B|</span><span>|A &cup; B|</span></span></p>
-          <p class="eq-note">Used to fuse boxes across models and to score localisation against hand labels.</p></div>
-        <div class="eq"><p class="eq-name">Calibrated confidence</p>
-          <p class="f">p(correct | x) = &sigma;(&beta;<sub>0</sub> + &beta;<sup>&#8868;</sup>x)</p>
-          <p class="eq-note">x = agreement, judge verdict, verifier score, uncertainty and inference flags. Logistic regression, cross-validated.</p></div>
-        <div class="eq"><p class="eq-name">Uncertainty ranges</p>
-          <p class="f">CI<sub>95</sub> = [ q<sub>0.025</sub>, q<sub>0.975</sub> ] of &theta;&#770;*<sub>1..B</sub>,&nbsp; B = 1000</p>
-          <p class="eq-note">Percentile bootstrap over test images: how far each metric could move with different photos.</p></div>
-        <div class="eq"><p class="eq-name">Label reliability</p>
-          <p class="f">&kappa; = <span class="frac"><span>p<sub>o</sub> &minus; p<sub>e</sub></span><span>1 &minus; p<sub>e</sub></span></span></p>
-          <p class="eq-note">Cohen's kappa between two blind human labellers. Sets the ceiling for meaningful accuracy.</p></div>
-        <div class="eq"><p class="eq-name">Robustness</p>
-          <p class="f">J(S, S&prime;) = <span class="frac"><span>|S &cap; S&prime;|</span><span>|S &cup; S&prime;|</span></span></p>
-          <p class="eq-note">Stability of findings under blur, darkness, JPEG q20, crop, rotation, flip, low resolution and reruns.</p></div>
-        <div class="eq"><p class="eq-name">Does confidence rank right?</p>
-          <p class="f">AUROC = P( c<sup>+</sup> &gt; c<sup>&minus;</sup> )</p>
-          <p class="eq-note">Probability that a correct finding gets a higher confidence than a wrong one.</p></div>
-      </div>
-
-      <p class="label">Measured results <span class="pill" id="resultsPill">awaiting labelled test run</span></p>
-      <p class="verdict" id="verdict"></p>
-      <div id="accuracy"></div>
-      <div id="comparison"></div>
-
-      <details class="limits">
-        <summary>Honest limits: what the math cannot establish</summary>
-        <ul>
-          <li>Accuracy is bounded by label quality: if two humans agree with kappa &kappa;, scores far above that mean little.</li>
-          <li>The test set is small. The bootstrap ranges show how much each number could move.</li>
-          <li>Some test photos come from public datasets and may not look like real claim photos.</li>
-          <li>One photo cannot show cause, wetness, depth or hidden damage. These are never reported as findings.</li>
-          <li>Thin cracks and faint stains are hard to confirm, so they are flagged uncertain rather than dropped.</li>
-          <li>This is evidence extraction, not a coverage decision. A person reviews every claim.</li>
-        </ul>
-      </details>
-    </div>
-  </dialog>
-
-  <button class="sc-fab" id="scFab" type="button" aria-haspopup="dialog">
-    <span class="sc-rings" aria-hidden="true"><i style="--w:30"></i><i style="--w:30"></i><i style="--w:20"></i><i style="--w:10"></i><i style="--w:10"></i></span>
-    <span class="sc-fab-txt"><b>Judging scorecard</b><span id="scFabSub">5 criteria · live telemetry</span></span>
-  </button>
-
-  <dialog id="scDialog" class="sc" aria-label="Judging scorecard">
-    <div class="sc-body">
-      <button class="sc-close" id="scClose" type="button" aria-label="Close">×</button>
-      <p class="sc-kicker">// judging scorecard</p>
-      <h2>Every criterion, instrumented.</h2>
-      <div class="sc-weights" aria-label="Criterion weights">
-        <span style="--w:30" data-k="ex" title="Extraction quality">Extraction 30</span><span style="--w:30" data-k="ev">Evaluation 30</span><span style="--w:20" data-k="un" title="Uncertainty &amp; robustness">Uncertainty 20</span><span style="--w:10" data-k="re" title="Reproducibility">Repro 10</span><span style="--w:10" data-k="ef" title="Efficiency">Speed 10</span>
-      </div>
-
-      <section class="sc-live">
-        <p class="sc-h">Live session telemetry <em id="scN">0 analyses</em></p>
-        <div class="sc-grid" id="scLive"></div>
-        <p class="sc-note">Computed in your browser from every real analysis in this session. Nothing simulated.</p>
-      </section>
-
-      <div id="scCriteria"></div>
-    </div>
-  </dialog>
-
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="assets/app.js?v=15"></script>
+  <script src="assets/app.js?v=20"></script>
 </body>
 </html>
