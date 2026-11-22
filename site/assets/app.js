@@ -228,13 +228,16 @@
       [loadJSON("data/metrics.json"), loadJSON("data/comparison.json"), loadJSON("data/agreement.json")]);
     const m = state.metrics, v = $("#verdict");
     if (!m) {
-      v.textContent = "Not yet validated on labelled photos. Until it is, treat every result as unverified.";
-      v.className = "verdict warn";
-      $("#accuracy").innerHTML = `<p class="label">Accuracy</p><p class="empty">Measured accuracy appears here once the 100 hand-labelled test photos are scored. We do not show numbers we have not measured.</p>`;
+      v.textContent = "The evaluation harness is built and tested. These tiles fill in automatically when the hand-labelled test run is scored. Until then, every result is unverified.";
+      v.className = "verdict pending";
+      $("#accuracy").innerHTML = `<div class="pending-grid">${[["Precision", "TP / (TP + FP)"], ["Recall", "TP / (TP + FN)"],
+        ["Invented damage on clean photos", "P(finding | no damage)"], ["Calibration", "AUROC, reliability curve"]]
+        .map(([n, f]) => `<div class="pend"><b>${n}</b><code>${f}</code><span>pending</span></div>`).join("")}</div>`;
     } else {
       const k = state.agreement?.kappa_damage_type_presence;
       v.textContent = `Tested on ${m.images_evaluated} hand-labelled photos.` + (k != null ? ` Two humans agree with kappa ${k.toFixed(2)}.` : "");
       v.className = "verdict";
+      $("#resultsPill").textContent = "measured"; $("#resultsPill").classList.add("ok");
       const ci = m.ci95 || {};
       const row = (name, val, range, note, lowerIsBetter) => {
         const r = range ? `<div class="range"><i style="left:${range[0] * 100}%;width:${Math.max(1, (range[1] - range[0]) * 100)}%"></i>${val != null ? `<em style="left:${val * 100}%"></em>` : ""}</div>` : "";

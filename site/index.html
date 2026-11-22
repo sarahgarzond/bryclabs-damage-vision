@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=12">
+  <link rel="stylesheet" href="assets/style.css?v=13">
 </head>
 <body>
   <header class="top">
@@ -99,25 +99,69 @@
   <dialog id="infoDrawer" class="drawer" aria-label="How reliable is this?">
     <div class="drawer-body">
       <button class="drawer-close" id="infoClose" type="button" aria-label="Close">×</button>
+      <p class="kicker">Under the hood</p>
+      <h2 class="uh-title">Multi-model ensemble, adversarial review, calibrated uncertainty.</h2>
+      <div class="stats">
+        <div><b>3 + 1</b><span>vision agents in parallel, plus a judge</span></div>
+        <div><b>13</b><span>damage classes in a fixed ontology</span></div>
+        <div><b>1,000</b><span>bootstrap resamples per metric</span></div>
+        <div><b>8</b><span>stress transforms per test image</span></div>
+      </div>
+
+      <p class="label">Pipeline</p>
+      <ol class="flow">
+        <li><i>01</i><b>Ensemble</b><span>Gemini, GPT and Qwen-VL read the photo independently, each forced into the same JSON schema</span></li>
+        <li><i>02</i><b>Fusion</b><span>Findings are clustered across models by type and box overlap</span></li>
+        <li><i>03</i><b>Adversarial judge</b><span>A separate model tries to refute every finding against the pixels</span></li>
+        <li><i>04</i><b>Calibration</b><span>Agreement and verdicts are mapped to a probability of being correct</span></li>
+        <li><i>05</i><b>Evidence</b><span>Schema-valid JSON, boxes, caveats and the information still needed</span></li>
+      </ol>
+
+      <p class="label">The math</p>
+      <div class="math">
+        <div class="eq"><p class="eq-name">Cross-model agreement</p>
+          <p class="f">a(f) = <span class="frac"><span>1</span><span>M</span></span> &sum;<sub>m</sub> &#120793;[ f &isin; F<sub>m</sub> ]</p>
+          <p class="eq-note">Share of the M models that report finding f. Findings match when types agree and IoU &ge; 0.2.</p></div>
+        <div class="eq"><p class="eq-name">Box overlap</p>
+          <p class="f">IoU(A, B) = <span class="frac"><span>|A &cap; B|</span><span>|A &cup; B|</span></span></p>
+          <p class="eq-note">Used to fuse boxes across models and to score localisation against hand labels.</p></div>
+        <div class="eq"><p class="eq-name">Calibrated confidence</p>
+          <p class="f">p(correct | x) = &sigma;(&beta;<sub>0</sub> + &beta;<sup>&#8868;</sup>x)</p>
+          <p class="eq-note">x = agreement, judge verdict, verifier score, uncertainty and inference flags. Logistic regression, cross-validated.</p></div>
+        <div class="eq"><p class="eq-name">Uncertainty ranges</p>
+          <p class="f">CI<sub>95</sub> = [ q<sub>0.025</sub>, q<sub>0.975</sub> ] of &theta;&#770;*<sub>1..B</sub>,&nbsp; B = 1000</p>
+          <p class="eq-note">Percentile bootstrap over test images: how far each metric could move with different photos.</p></div>
+        <div class="eq"><p class="eq-name">Label reliability</p>
+          <p class="f">&kappa; = <span class="frac"><span>p<sub>o</sub> &minus; p<sub>e</sub></span><span>1 &minus; p<sub>e</sub></span></span></p>
+          <p class="eq-note">Cohen's kappa between two blind human labellers. Sets the ceiling for meaningful accuracy.</p></div>
+        <div class="eq"><p class="eq-name">Robustness</p>
+          <p class="f">J(S, S&prime;) = <span class="frac"><span>|S &cap; S&prime;|</span><span>|S &cup; S&prime;|</span></span></p>
+          <p class="eq-note">Stability of findings under blur, darkness, JPEG q20, crop, rotation, flip, low resolution and reruns.</p></div>
+        <div class="eq"><p class="eq-name">Does confidence rank right?</p>
+          <p class="f">AUROC = P( c<sup>+</sup> &gt; c<sup>&minus;</sup> )</p>
+          <p class="eq-note">Probability that a correct finding gets a higher confidence than a wrong one.</p></div>
+      </div>
+
+      <p class="label">Measured results <span class="pill" id="resultsPill">awaiting labelled test run</span></p>
       <p class="verdict" id="verdict"></p>
       <div id="accuracy"></div>
       <div id="comparison"></div>
-      <div class="limits">
-        <p class="label">Known limits</p>
+
+      <details class="limits">
+        <summary>Honest limits: what the math cannot establish</summary>
         <ul>
-          <li>Accuracy is only as good as our labels: two humans agree on damage types with the kappa shown above, so higher scores than that mean little.</li>
-          <li>The test set is small. The ranges show how much each number could move with a different sample of photos.</li>
-          <li>Our test photos partly come from public datasets and may not look like real claim photos.</li>
+          <li>Accuracy is bounded by label quality: if two humans agree with kappa &kappa;, scores far above that mean little.</li>
+          <li>The test set is small. The bootstrap ranges show how much each number could move.</li>
+          <li>Some test photos come from public datasets and may not look like real claim photos.</li>
           <li>One photo cannot show cause, wetness, depth or hidden damage. These are never reported as findings.</li>
-          <li>Thin cracks and faint stains are often missed by the detector, so they are flagged uncertain rather than confirmed.</li>
-          <li>Confidence scores are only meaningful once calibrated on labelled photos. Each result says whether that has happened.</li>
+          <li>Thin cracks and faint stains are hard to confirm, so they are flagged uncertain rather than dropped.</li>
           <li>This is evidence extraction, not a coverage decision. A person reviews every claim.</li>
         </ul>
-      </div>
+      </details>
     </div>
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="assets/app.js?v=13"></script>
+  <script src="assets/app.js?v=14"></script>
 </body>
 </html>
