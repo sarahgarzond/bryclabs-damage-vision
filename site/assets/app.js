@@ -14,7 +14,7 @@
   /* ---------- connection ---------- */
   const normalise = (u) => { u = (u || "").trim().replace(/\/+$/, ""); if (u && !/^https?:\/\//i.test(u)) u = "https://" + u; return u || null; };
   async function health(url) {
-    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 6000);
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 25000);
     try { const r = await fetch(url + "/health", { signal: ctrl.signal }); if (!r.ok) throw new Error("HTTP " + r.status); return await r.json(); }
     finally { clearTimeout(t); }
   }
@@ -26,7 +26,9 @@
     if (!state.api) return setStatus(null, "Model disconnected");
     setStatus(null, "Connecting…");
     try {
-      const h = await health(state.api); state.health = h;
+      let h;
+      try { h = await health(state.api); } catch { await new Promise((r) => setTimeout(r, 1500)); h = await health(state.api); }
+      state.health = h;
       setStatus(h.mock ? "mock" : "live", h.mock ? "Mock model" : "Live · " + String(h.model).split("/").pop());
     } catch { setStatus("down", "Model offline"); if (!quiet) toast("Could not reach the model"); }
   }
@@ -81,6 +83,8 @@
     $("#out").hidden = true;
     $("#uploadStatus").hidden = true;
     await connectionReady;
+    if (current !== selection) return;
+    if (!state.health && state.api) await connect(state.api, true);
     if (current !== selection) return;
     if (!state.health || state.health.mock) {
       const status = $("#uploadStatus");
