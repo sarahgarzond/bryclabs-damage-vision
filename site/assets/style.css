@@ -256,3 +256,6 @@ img { display: block; max-width: 100%; }
 .limits { margin-top: 20px; border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
 .limits summary { cursor: pointer; font-weight: 700; font-size: 14px; }
 .limits ul { margin-top: 10px; }
+
+.btn.icon-btn { width: 46px; height: 46px; padding: 0; justify-content: center; border-radius: 14px; }
+.btn.icon-btn svg { width: 22px; height: 22px; stroke-width: 2.4; }
