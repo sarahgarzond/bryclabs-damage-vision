@@ -192,6 +192,7 @@ class RunMeta(BaseModel):
     tokens: Optional[int] = None
     est_cost_usd: Optional[float] = None
     calibrated: bool = Field(default=False, description="confidence from a model fitted on gold labels")
+    agents: list[dict] = Field(default_factory=list, description="per-subagent trace: model, role, ok, seconds, error")
     errors: list[str] = Field(default_factory=list)
 
 
@@ -207,6 +208,9 @@ class ImageResult(BaseModel):
     limitations: list[str] = Field(default_factory=list)
     dropped_findings: list[Finding] = Field(
         default_factory=list, description="removed as unsupported, kept for transparency"
+    )
+    missing_information: list[str] = Field(
+        default_factory=list, description="what an adjuster still needs that this photo cannot show"
     )
     meta: Optional[RunMeta] = None
     status: str = Field(default="ok", description="'ok' or 'error'")
@@ -245,6 +249,23 @@ def inline_refs(schema: dict[str, Any]) -> dict[str, Any]:
         return node
 
     return resolve(schema)
+
+
+def strict_schema(model: type[BaseModel]) -> dict[str, Any]:
+    """Schema for strict structured outputs (Anthropic output_config.format, OpenAI strict):
+    refs inlined, every object closed (additionalProperties false) with all keys required
+    (optional values stay nullable through anyOf null), defaults and titles removed."""
+    def walk(node):
+        if isinstance(node, dict):
+            node = {k: walk(v) for k, v in node.items() if k not in ("default", "title")}
+            if node.get("type") == "object" and "properties" in node:
+                node["additionalProperties"] = False
+                node["required"] = list(node["properties"])
+            return node
+        if isinstance(node, list):
+            return [walk(x) for x in node]
+        return node
+    return walk(inline_refs(model.model_json_schema()))
 
 
 def model_output_schema() -> dict[str, Any]:

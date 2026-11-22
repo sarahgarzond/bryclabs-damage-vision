@@ -1,0 +1,13 @@
+site
+docs
+tests
+notebooks
+data
+labels
+outputs
+schema
+scripts
+app/app.py
+app/label_app.py
+requirements-dev.txt
+requirements-gpu.txt

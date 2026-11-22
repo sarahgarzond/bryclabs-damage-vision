@@ -1,12 +1,7 @@
-# core (CPU is fine): schema, evaluation, website, labelling app, OpenAI-compatible client
+# Runtime for the API (app/api.py, Vercel). Keep this lean: serverless bundles have a size limit.
 pydantic>=2.6
 pillow>=10.0
-numpy>=1.26
-openai>=1.40
-gradio>=4.44
-scikit-learn>=1.4
-matplotlib>=3.8
-pytest>=8.0
-fastapi>=0.110          # app/api.py for the GitHub Pages site
-uvicorn>=0.29
+fastapi>=0.110
 python-multipart>=0.0.9
+anthropic>=2.0
+openai>=1.40

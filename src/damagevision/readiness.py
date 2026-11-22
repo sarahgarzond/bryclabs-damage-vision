@@ -41,6 +41,8 @@ def assess(result: ImageResult, claimant_text: Optional[str] = None) -> dict:
         if long_term:
             indicated.append(f"Possible long-term damage indicators at {label}: {', '.join(long_term)}")
 
+    requests.extend(result.missing_information)  # from the judge agent, specific to this photo
+
     if result.image_quality.value != "good":
         issues = ", ".join(q.value for q in result.quality_issues) or result.image_quality.value
         missing.append(f"Photo quality limits the assessment ({issues})")

@@ -10,13 +10,14 @@ from pathlib import Path
 
 COLS = ["image_id", "damage_present", "image_quality", "quality_issues", "scene", "finding_no", "damage_type", "component",
         "material", "location", "extent", "status", "uncertain", "confidence", "agreement", "verified", "bbox_x", "bbox_y",
-        "bbox_w", "bbox_h", "visible_traits", "age_indicators", "notes", "limitations"]
+        "bbox_w", "bbox_h", "visible_traits", "age_indicators", "notes", "limitations", "missing_information"]
 
 
 def rows(res):
     j = lambda a: " | ".join(a or [])
     base = {"image_id": res["image_id"], "damage_present": res["damage_present"], "image_quality": res["image_quality"],
-            "quality_issues": j(res.get("quality_issues")), "scene": res["scene"], "limitations": j(res.get("limitations"))}
+            "quality_issues": j(res.get("quality_issues")), "scene": res["scene"], "limitations": j(res.get("limitations")),
+            "missing_information": j(res.get("missing_information"))}
     fs = res.get("findings") or []
     if not fs:
         return [base]

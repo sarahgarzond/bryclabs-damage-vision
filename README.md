@@ -7,14 +7,21 @@ We extract policy-relevant evidence from a photo, check it, say how confident we
 ## Quick start (no GPU, 2 minutes)
 
 ```bash
-pip install -r requirements.txt
-pytest                                                    # 14 tests
+pip install -r requirements-dev.txt
+pytest                                                    # 20 tests
 python scripts/export_schema.py                           # writes schema/*.schema.json
 python scripts/run.py --images data/images --out outputs/demo --backend mock --no-verify
 DV_BACKEND=mock DV_VERIFY=0 python app/app.py             # website on http://localhost:7860
 ```
 
 The `mock` backend returns fake but valid output. Use it to develop the UI and the evaluation code before the GPU is ready. Its output is marked and must never be reported as a result.
+
+## Live multi-model backend (orchestrator)
+
+With model API keys set, `app/api.py` runs an orchestrator: Claude, GPT and Gemini analyse the photo in parallel as
+subagents with the same JSON schema, findings are merged by cross-model agreement, and a Claude judge checks each
+finding against the photo and lists missing information. Deploy it on Vercel in a few minutes:
+[docs/deploy_api_vercel.md](docs/deploy_api_vercel.md). Code: `src/damagevision/orchestrator.py`, `claude_agents.py`.
 
 ## Demo website (GitHub Pages)
 

@@ -1,5 +1,5 @@
 # GPU machine (AWS / Colab / Kaggle): local model + verifier
--r requirements.txt
+-r requirements-dev.txt
 torch>=2.3
 transformers>=4.49
 accelerate>=0.33

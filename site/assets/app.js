@@ -121,6 +121,12 @@
       m.runtime_s ? `${Number(m.runtime_s).toFixed(1)} s` : "", m.model && m.model !== m.backend ? String(m.model).split("/").pop() : "",
     ].filter(Boolean).join(" · ");
     renderCaveats(res, source);
+    const need = res.missing_information || [];
+    $("#needed").hidden = !need.length;
+    $("#neededList").innerHTML = need.map((x) => `<li>${esc(x)}</li>`).join("");
+    const ag = res.meta?.agents || [];
+    $("#agents").innerHTML = ag.map((a) => `<span class="${a.ok ? (a.role === "judge" ? "judge" : "") : "bad"}" title="${esc(a.error || "")}">${
+      a.role === "judge" ? "judge · " : ""}${esc(String(a.model).split("/").pop())} ${a.ok ? "✓" : "✕"}${a.seconds != null ? " " + a.seconds + "s" : ""}</span>`).join("");
     $("#json").innerHTML = highlight(JSON.stringify(res, null, 2));
     $("#out").hidden = false;
   }
@@ -144,11 +150,12 @@
   /* ---------- CSV: one row per finding, image fields repeated ---------- */
   const CSV_COLS = ["image_id", "damage_present", "image_quality", "quality_issues", "scene", "finding_no", "damage_type", "component",
     "material", "location", "extent", "status", "uncertain", "confidence", "agreement", "verified", "bbox_x", "bbox_y", "bbox_w", "bbox_h",
-    "visible_traits", "age_indicators", "notes", "limitations"];
+    "visible_traits", "age_indicators", "notes", "limitations", "missing_information"];
   function toCSV(res) {
     const join = (a) => (a || []).join(" | ");
     const base = { image_id: res.image_id, damage_present: res.damage_present, image_quality: res.image_quality,
-      quality_issues: join(res.quality_issues), scene: res.scene, limitations: join(res.limitations) };
+      quality_issues: join(res.quality_issues), scene: res.scene, limitations: join(res.limitations),
+      missing_information: join(res.missing_information) };
     const rows = (res.findings || []).length ? res.findings.map((f, i) => ({
       ...base, finding_no: i + 1, damage_type: f.damage_type, component: f.component, material: f.material, location: f.location,
       extent: f.extent, status: f.status, uncertain: f.uncertain, confidence: f.confidence, agreement: f.agreement, verified: f.verified,
@@ -180,12 +187,15 @@
     if (res.status === "error") c.push("The model failed on this photo. No findings should be trusted.");
     if (!state.metrics) c.push("The model has not been validated on labelled photos yet. Treat every finding as unverified.");
     if (!m.calibrated && source !== "illustrative") c.push("Confidence percentages are a heuristic, not calibrated against labelled photos.");
-    if (m.runs === 1) c.push("Single run: no consistency check across repeated runs.");
-    if (m.backend && m.backend !== "illustrative" && !m.verifier) c.push("No independent detector checked these findings.");
+    const failed = (m.agents || []).filter((a) => !a.ok);
+    if (failed.length) c.push(`${failed.length} model${failed.length > 1 ? "s" : ""} failed on this photo (${failed.map((a) => a.agent || a.model).join(", ")}). Agreement is based on fewer models.`);
+    if (m.backend === "orchestrator" && (m.agents || []).filter((a) => a.ok && a.role === "extractor").length === 1) c.push("Only one model answered: there is no cross-model agreement check.");
+    if (m.runs === 1 && m.backend !== "orchestrator") c.push("Single run: no consistency check across repeated runs.");
+    if (m.backend && m.backend !== "illustrative" && !m.verifier) c.push("No independent reviewer checked these findings.");
     const unc = fs.filter((f) => f.uncertain).length;
-    if (unc) c.push(`${unc} of ${fs.length} findings are uncertain: low agreement between runs or not confirmed by the detector.`);
+    if (unc) c.push(`${unc} of ${fs.length} findings are uncertain: low agreement between models or runs, or not confirmed by the reviewer.`);
     const unconfirmed = fs.filter((f) => f.verified === false).length;
-    if (unconfirmed) c.push(`${unconfirmed} finding${unconfirmed > 1 ? "s were" : " was"} not found by the detector at the claimed position.`);
+    if (unconfirmed) c.push(`${unconfirmed} finding${unconfirmed > 1 ? "s were" : " was"} not confirmed by the reviewer (detector or judge model).`);
     if (res.image_quality && res.image_quality !== "good") c.push(`Photo quality is ${res.image_quality}${res.quality_issues?.length ? " (" + res.quality_issues.join(", ").replace(/_/g, " ") + ")" : ""}: damage may be missed or misread.`);
     if (res.damage_present === "unclear") c.push("The system could not decide whether damage is present.");
     if (res.damage_present === "no") c.push("No damage found means none was visible in this frame, not that the property is undamaged.");

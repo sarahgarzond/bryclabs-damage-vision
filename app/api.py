@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from PIL import Image, ImageOps, UnidentifiedImageError  # noqa: E402
 
 from damagevision.backends import get_backend  # noqa: E402
+from damagevision.orchestrator import Orchestrator, build_agents_cheap  # noqa: E402
 from damagevision.pipeline import Pipeline, PipelineConfig  # noqa: E402
 from damagevision.readiness import assess  # noqa: E402
 
@@ -34,22 +35,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_backend = get_backend()
-PIPE = Pipeline(_backend, PipelineConfig(runs=int(os.getenv("DV_RUNS", "3")),
-                                          verify=os.getenv("DV_VERIFY", "1") == "1",
-                                          cost_per_hour_usd=float(os.getenv("DV_COST_PER_HOUR", "0")) or None))
+# DV_BACKEND=orchestrator (default when any model API key is set): parallel model subagents + judge.
+# Otherwise the single-model pipeline (openai-compatible / hf / mock).
+_mode = os.getenv("DV_BACKEND") or ("orchestrator" if build_agents_cheap() else "mock")
+if _mode == "orchestrator":
+    PIPE = Orchestrator()
+    _describe = PIPE.describe
+else:
+    _backend = get_backend(_mode)
+    PIPE = Pipeline(_backend, PipelineConfig(runs=int(os.getenv("DV_RUNS", "3")),
+                                              verify=os.getenv("DV_VERIFY", "1") == "1",
+                                              cost_per_hour_usd=float(os.getenv("DV_COST_PER_HOUR", "0")) or None))
+
+    def _describe():
+        return {"backend": _backend.name, "model": _backend.model, "runs": PIPE.cfg.runs,
+                "verifier": PIPE.verifier.model if PIPE.cfg.verify and PIPE.verifier else None,
+                "mock": _backend.name == "mock", "agents": [{"name": _backend.name, "model": _backend.model}]}
+
+
+@app.get("/")
+def root():
+    return {"service": "damage evidence API", "endpoints": ["/health", "/analyze"]}
 
 
 @app.get("/health")
 def health():
-    return {
-        "ok": True,
-        "backend": _backend.name,
-        "model": _backend.model,
-        "runs": PIPE.cfg.runs,
-        "verifier": PIPE.verifier.model if PIPE.cfg.verify and PIPE.verifier else None,
-        "mock": _backend.name == "mock",
-    }
+    return {"ok": True, **_describe()}
 
 
 @app.post("/analyze")

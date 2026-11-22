@@ -49,14 +49,19 @@ def parse_json(text: str) -> Optional[ModelOutput]:
         return None
 
 
-def _to_data_url(img: Image.Image, max_side: int = 1280) -> str:
+def jpeg_b64(img: Image.Image, max_side: int = 1280) -> str:
+    """Base64 JPEG (no data: prefix), long side capped to keep requests small and fast."""
     img = img.convert("RGB")
     if max(img.size) > max_side:
         img = img.copy()
         img.thumbnail((max_side, max_side))
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=90)
-    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+    return base64.standard_b64encode(buf.getvalue()).decode()
+
+
+def _to_data_url(img: Image.Image, max_side: int = 1280) -> str:
+    return "data:image/jpeg;base64," + jpeg_b64(img, max_side)
 
 
 class Backend:
@@ -84,31 +89,42 @@ class Backend:
 
 
 class OpenAICompatBackend(Backend):
+    """Any OpenAI-compatible chat API: vLLM (Qwen-VL), OpenAI, or Gemini's OpenAI endpoint."""
+
     name = "openai"
 
     def __init__(self, model: str | None = None, base_url: str | None = None, api_key: str | None = None,
-                 guided: bool = True, max_tokens: int = 2048):
+                 guided: bool = True, max_tokens: int = 2048, name: str | None = None, strict: bool = False,
+                 send_temperature: bool = True, token_param: str = "max_tokens", timeout: float = 55.0):
         from openai import OpenAI
 
         self.model = model or os.getenv("DV_MODEL", "Qwen/Qwen2.5-VL-7B-Instruct")
         self.client = OpenAI(base_url=base_url or os.getenv("DV_BASE_URL", "http://localhost:8000/v1"),
-                             api_key=api_key or os.getenv("DV_API_KEY", "EMPTY"))
+                             api_key=api_key or os.getenv("DV_API_KEY", "EMPTY"), timeout=timeout, max_retries=1)
+        if name:
+            self.name = name
         self.guided = guided
+        self.strict = strict
         self.max_tokens = max_tokens
+        self.send_temperature = send_temperature   # OpenAI reasoning models reject temperature != default
+        self.token_param = token_param             # OpenAI: "max_completion_tokens"
 
     def generate(self, img, temperature=0.0, seed=None):
-        kwargs = {}
+        from .schema import strict_schema
+
+        kwargs = {self.token_param: self.max_tokens}
         if self.guided:
+            schema = strict_schema(ModelOutput) if self.strict else model_output_schema()
             kwargs["response_format"] = {
                 "type": "json_schema",
-                "json_schema": {"name": "damage_extraction", "schema": model_output_schema()},
+                "json_schema": {"name": "damage_extraction", "schema": schema, **({"strict": True} if self.strict else {})},
             }
-        if seed is not None:
+        if self.send_temperature:
+            kwargs["temperature"] = temperature
+        if seed is not None and self.send_temperature:
             kwargs["seed"] = seed
         resp = self.client.chat.completions.create(
             model=self.model,
-            temperature=temperature,
-            max_tokens=self.max_tokens,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": [

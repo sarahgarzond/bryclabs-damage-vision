@@ -1,0 +1,9 @@
+# Local development, evaluation, Gradio apps and tests
+-r requirements.txt
+numpy>=1.26
+uvicorn>=0.29
+gradio>=4.44
+scikit-learn>=1.4
+matplotlib>=3.8
+pytest>=8.0
+httpx>=0.27
