@@ -120,10 +120,6 @@
     else if (res.meta?.backend === "mock") { n.hidden = false; n.textContent = "Mock model: fake output for testing the interface."; }
 
     const m = res.meta || {};
-    $("#meta").textContent = [
-      `${(res.findings || []).length} finding${(res.findings || []).length === 1 ? "" : "s"}`, `damage ${res.damage_present}`,
-      m.runtime_s ? `${Number(m.runtime_s).toFixed(1)} s` : "", m.model && m.model !== m.backend ? String(m.model).split("/").pop() : "",
-    ].filter(Boolean).join(" · ");
     renderCaveats(res, source);
     const need = res.missing_information || [];
     $("#needed").hidden = !need.length;
