@@ -24,7 +24,7 @@ photo ─► Claude Opus 5.5 ┐
 | `GEMINI_API_KEY` | Gemini subagent (optional) |
 | `DV_CORS_ORIGINS` | `https://sarahgarzond.github.io` so only the site can call it |
 
-   Optional: `DV_OPENAI_MODEL` (default `gpt-5.1`), `DV_GEMINI_MODEL` (default `gemini-2.5-pro`),
+   Optional: `DV_OPENAI_MODEL` (default `gpt-5.1`), `DV_GEMINI_MODEL` (default `gemini-3.1-pro-preview`),
    `DV_CLAUDE_MODEL` (default `claude-opus-5-5`), `DV_EXTRACT_EFFORT` (`low`), `DV_JUDGE_EFFORT` (`medium`),
    `DV_AGENTS` (e.g. `claude,gemini`), `DV_JUDGE=0` to skip the judge. Set the OpenAI and Gemini model names to the
    newest vision models your keys can use.

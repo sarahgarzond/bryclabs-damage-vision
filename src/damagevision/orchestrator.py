@@ -41,7 +41,7 @@ def build_agents(enabled: Optional[str] = None) -> list[Backend]:
             token_param="max_completion_tokens", max_tokens=int(os.getenv("DV_OPENAI_MAX_TOKENS", "8000"))))
     if "gemini" in wanted and (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")):
         agents.append(OpenAICompatBackend(
-            name="gemini", model=os.getenv("DV_GEMINI_MODEL", "gemini-2.5-pro"),
+            name="gemini", model=os.getenv("DV_GEMINI_MODEL", "gemini-3.1-pro-preview"),
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"), max_tokens=8000, send_seed=False))
     if "vllm" in wanted and os.getenv("DV_BASE_URL"):
