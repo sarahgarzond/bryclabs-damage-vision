@@ -225,7 +225,8 @@
     runs.push({ ok: res.status !== "error", secs: Number(res.meta?.runtime_s) || null, findings: fs.length,
       agreement: fs.length ? fs.reduce((a, f) => a + (f.agreement ?? 0), 0) / fs.length : null,
       uncertain: fs.length ? fs.filter((f) => f.uncertain).length / fs.length : null,
-      dropped: (res.dropped_findings || []).length, agentsOk: ag.length ? ag.filter((a) => a.ok).length / ag.length : null });
+      dropped: (res.dropped_findings || []).length, agentsOk: ag.length ? ag.filter((a) => a.ok).length / ag.length : null,
+      multi: ag.length > 1 });
   }
   const mean = (xs) => { xs = xs.filter((x) => x != null && !Number.isNaN(x)); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
   const p95 = (xs) => { xs = xs.filter((x) => x != null).sort((a, b) => a - b); return xs.length ? xs[Math.min(xs.length - 1, Math.floor(0.95 * xs.length))] : null; };
@@ -265,9 +266,10 @@
       c.setups.map((r) => `<tr class="${/full pipeline/i.test(r.setup) ? "ours" : ""}"><td>${esc(r.setup)}</td><td>${pct(r.precision)}</td><td>${pct(r.recall)}</td><td>${pct(r.hallucination_rate)}</td><td>${r.s_per_image != null ? r.s_per_image.toFixed(1) : "–"}</td></tr>`).join("")}</tbody></table>` : "";
 
     const ok = runs.filter((r) => r.ok), secs = runs.map((r) => r.secs);
+    const multi = runs.some((r) => r.multi), na = "n/a · single model";
     const kv = [["Analyses", String(runs.length)], ["Mean runtime", sec(mean(secs))], ["95th percentile runtime", sec(p95(secs))],
-      ["Without error", runs.length ? pct(ok.length / runs.length) : "–"], ["Model availability", pct(mean(runs.map((r) => r.agentsOk)))],
-      ["Mean cross-model agreement", pct(mean(ok.map((r) => r.agreement)))], ["Findings flagged uncertain", pct(mean(ok.map((r) => r.uncertain)))],
+      ["Without error", runs.length ? pct(ok.length / runs.length) : "–"], ["Model availability", multi ? pct(mean(runs.map((r) => r.agentsOk))) : (runs.length ? na : "–")],
+      ["Mean cross-model agreement", multi ? pct(mean(ok.filter((r) => r.multi).map((r) => r.agreement))) : (runs.length ? na : "–")], ["Findings flagged uncertain", pct(mean(ok.map((r) => r.uncertain)))],
       ["Unsupported findings removed", String(runs.reduce((a, r) => a + r.dropped, 0))]];
     $("#session").innerHTML = kv.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("");
   }
